@@ -66,6 +66,14 @@ function configure(servernode) {
     // together with a reverse proxy engine like Ngix. (e.g. /mybasepath).
     servernode.basepath = null;
 
+    // Enables the reliable sending of messages. Each GameMessage has a
+    // reliable field which is ignored if this setting is not turned on.
+    servernode.reliableMessaging = true;
+
+    // Time interval in milliseconds between two consecutive tries of sending
+    // reliable messages.
+    servernode.reliableRetryInterval = 30000;
+
     // 2. Channels configuration.
 
     // AdminServer default options.
