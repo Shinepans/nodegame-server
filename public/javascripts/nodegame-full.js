@@ -1126,10 +1126,6 @@ if (!JSON) {
     // Reference to all the extensions
     JSUS._classes = {};
 
-    // Make sure that the console is available also in old browser, e.g. < IE8.
-    if ('undefined' === typeof console) console = {};
-    if ('undefined' === typeof console.log) console.log = function() {};
-
     /**
      * ## JSUS.log
      *
@@ -1157,7 +1153,6 @@ if (!JSON) {
      *
      * @param {object} additional Text to output
      * @param {object|function} target The object to extend
-     *
      * @return {object|function} target The extended object
      *
      * @see JSUS.get
@@ -1211,14 +1206,13 @@ if (!JSON) {
     /**
      * ## JSUS.require
      *
-     * Returns a copy of one / all the objects extending JSUS
+     * Returns a copy of one / all the objects extending JSUS.
      *
      * The first parameter is a string representation of the name of
      * the requested extending object. If no parameter is passed a copy
      * of all the extending objects is returned.
      *
      * @param {string} className The name of the requested JSUS library
-     *
      * @return {function|boolean} The copy of the JSUS library, or
      *   FALSE if the library does not exist
      */
@@ -2159,10 +2153,6 @@ if (!JSON) {
      *      }, document.body);
      * ```
      *
-     * Special span elements are %strong and %em, which add
-     * respectively a _strong_ and _em_ tag instead of the default
-     * _span_ tag. They cannot be styled.
-     *
      * @param {string} string A text to transform
      * @param {object} args Optional. An object containing string
      *   transformations
@@ -2176,28 +2166,29 @@ if (!JSON) {
         var text, textNode, span, idx_start, idx_finish, idx_replace, idxs;
         var spans, key, i, returnElement;
 
+        // If no formatting arguments are provided, just create a string
+        // and inserted into a span tag. If a root element is provided, add it.
+        if (!args) {
+            returnElement = document.createElement('span');
+            returnElement.appendChild(document.createTextNode(string));
+            return root ? root.appendChild(returnElement) : returnElement;
+        }
+
         root = root || document.createElement('span');
         spans = {};
-
-        // Create an args object, if none is provided.
-        // Defaults %em and %strong are added.
-        args = args || {};
-        args['%strong'] = '';
-        args['%em'] = '';
 
         // Transform arguments before inserting them.
         for (key in args) {
             if (args.hasOwnProperty(key)) {
 
+                // Pattern not found.
+                if (idx_start === -1) continue;
+
                 switch(key.charAt(0)) {
 
-                case '%': // Span/Strong/Emph .
+                case '%': // Span.
 
                     idx_start = string.indexOf(key);
-
-                    // Pattern not found. No error.
-                    if (idx_start === -1) continue;
-
                     idx_replace = idx_start + key.length;
                     idx_finish = string.indexOf(key, idx_replace);
 
@@ -2206,7 +2197,6 @@ if (!JSON) {
                         continue;
                     }
 
-                    // Can be strong, emph or a generic span.
                     spans[idx_start] = key;
 
                     break;
@@ -2226,7 +2216,7 @@ if (!JSON) {
             }
         }
 
-        // No span to create, return what we have.
+        // No span to creates.
         if (!JSUS.size(spans)) {
             return root.appendChild(document.createTextNode(string));
         }
@@ -2250,15 +2240,7 @@ if (!JSON) {
             idx_replace = idx_start + key.length;
             idx_finish = string.indexOf(key, idx_replace);
 
-            if (key === '%strong') {
-                span = document.createElement('strong');
-            }
-            else if (key === '%em') {
-                span = document.createElement('em');
-            }
-            else {
-                span = JSUS.getElement('span', null, args[key]);
-            }
+            span = JSUS.getElement('span', null, args[key]);
 
             text = string.substring(idx_replace, idx_finish);
 
@@ -3279,6 +3261,7 @@ if (!JSON) {
         return true;
     };
 
+
     /**
      * ## OBJ.size
      *
@@ -3658,7 +3641,7 @@ if (!JSON) {
 
             if (obj2.hasOwnProperty(i)) {
                 // it is an object and it is not NULL
-                if (obj2[i] && 'object' === typeof obj2[i]) {
+                if ( obj2[i] && 'object' === typeof obj2[i] ) {
                     // If we are merging an object into
                     // a non-object, we need to cast the
                     // type of obj1
@@ -3673,8 +3656,7 @@ if (!JSON) {
                         }
                     }
                     clone[i] = OBJ.merge(clone[i], obj2[i]);
-                }
-                else {
+                } else {
                     clone[i] = obj2[i];
                 }
             }
@@ -4537,7 +4519,7 @@ if (!JSON) {
 /**
  * # TIME
  *
- * Copyright(c) 2015 Stefano Balietti
+ * Copyright(c) 2014 Stefano Balietti
  * MIT Licensed
  *
  * Collection of static functions related to the generation,
@@ -4547,51 +4529,30 @@ if (!JSON) {
 
     function TIME() {}
 
-    // Polyfill for Date.toISOString (IE7, IE8, IE9)
-    // Kudos: https://developer.mozilla.org/en-US/docs/Web/
-    // JavaScript/Reference/Global_Objects/Date/toISOString
-    if (!Date.prototype.toISOString) {
-        (function() {
-
-            function pad(number) {
-                return (number < 10) ? '0' + number : number;
-            }
-
-            Date.prototype.toISOString = function() {
-                var ms = (this.getUTCMilliseconds() / 1000).toFixed(3);
-                return this.getUTCFullYear() +
-                    '-' + pad(this.getUTCMonth() + 1) +
-                    '-' + pad(this.getUTCDate()) +
-                    'T' + pad(this.getUTCHours()) +
-                    ':' + pad(this.getUTCMinutes()) +
-                    ':' + pad(this.getUTCSeconds()) +
-                    '.' + ms.slice(2, 5) + 'Z';
-            };
-
-        }());
-    }
-
     /**
      * ## TIME.getDate
      *
-     * Returns a string representation of the current date and time (ISO)
+     * Returns a string representation of the current date
+     * and time formatted as follows:
      *
-     * String is formatted as follows:
+     * dd-mm-yyyy hh:mm:ss milliseconds
      *
-     * YYYY-MM-DDTHH:mm:ss.sssZ
-     *
-     * @return {string} Formatted time string YYYY-MM-DDTHH:mm:ss.sssZ
+     * @return {string} Formatted time string hh:mm:ss
      */
     TIME.getDate = TIME.getFullDate = function() {
-        return new Date().toISOString();
+        var d = new Date();
+        var date = d.getUTCDate() + '-' + (d.getUTCMonth()+1) + '-' +
+            d.getUTCFullYear() + ' ' + d.getHours() + ':' + d.getMinutes() +
+            ':' + d.getSeconds() + ' ' + d.getMilliseconds();
+
+        return date;
     };
 
     /**
      * ## TIME.getTime
      *
      * Returns a string representation of the current time
-     *
-     * String is ormatted as follows:
+     * formatted as follows:
      *
      * hh:mm:ss
      *
@@ -4894,6 +4855,12 @@ if (!JSON) {
  * MIT Licensed
  *
  * NDDB is a powerful and versatile object database for node.js and the browser.
+ *
+ * TODO: When using index.update() and the update is suppose to remove the element
+ * from view and hashes, for example becausea property is deleted. index.update()
+ * fails doing so. Should be fixed. At the moment the only solution seems to
+ * reintroduce a global index for all items and to use that to quickly lookup items
+ * in views and hashes.
  *
  * See README.md for help.
  * ---
@@ -5293,6 +5260,7 @@ if (!JSON) {
         this.filters['in'] = function(d, value, comparator) {
             if ('object' === typeof d) {
                 return function(elem) {
+                    debugger
                     var i, len;
                     len = value.length;
                     for (i = 0; i < len; i++) {
@@ -6193,7 +6161,7 @@ if (!JSON) {
     NDDB.prototype._indexIt = function(o, dbidx, oldIdx) {
         var func, id, index, key;
         if (!o || J.isEmpty(this.__I)) return;
-        oldIdx = undefined;
+
         for (key in this.__I) {
             if (this.__I.hasOwnProperty(key)) {
                 func = this.__I[key];
@@ -6655,11 +6623,13 @@ if (!JSON) {
      * @see NDDB.last
      */
     NDDB.prototype.limit = function(limit) {
-        limit = limit || 0;
+        var db;
+        if ('number' !== typeof limit) {
+            throw new TypeError(this._getConstrName() +
+                                '.limit: limit must be number.');
+        }
         if (limit === 0) return this.breed();
-        var db = (limit > 0) ? this.db.slice(0, limit) :
-            this.db.slice(limit);
-
+        db = (limit > 0) ? this.db.slice(0, limit) : this.db.slice(limit);
         return this.breed(db);
     };
 
@@ -7011,12 +6981,10 @@ if (!JSON) {
 
                     if ('undefined' !== typeof key) {
                         if (comparator(foreign_key, key)) {
-                            // Inject the matched obj into the
-                            // reference one
+                            // Inject the matched obj into the reference one.
                             o = J.clone(this.db[i]);
-                            o2 = (select) ?
-                                J.subobj(this.db[j], select)
-                                : this.db[j];
+                            o2 = select ?
+                                J.subobj(this.db[j], select) : this.db[j];
                             o[pos] = o2;
                             out.push(o);
                         }
@@ -8375,13 +8343,14 @@ if (!JSON) {
     , 'undefined' !== typeof JSUS ? JSUS : module.parent.exports.JSUS || require('JSUS').JSUS
     , ('object' === typeof module && 'function' === typeof require) ? module.parent.exports.store || require('shelf.js/build/shelf-fs.js').store : this.store
 );
+
 /**
  * # nodeGame: Social Experiments in the Browser
- * Copyright(c) 2015 Stefano Balietti
+ * Copyright(c) 2014 Stefano Balietti
  * MIT Licensed
  *
  * nodeGame is a free, open source, event-driven javascript framework,
- * for online multiplayer games in the browser.
+ * for on line multiplayer games in the browser.
  */
 (function(exports) {
     if ('undefined' !== typeof JSUS) exports.JSUS = JSUS;
@@ -8776,7 +8745,7 @@ if (!JSON) {
  * Copyright(c) 2014 Stefano Balietti
  * MIT Licensed
  *
- * Handles runtime errors
+ * Handles the runtime errors
  */
 (function(exports, parent) {
 
@@ -8818,33 +8787,30 @@ if (!JSON) {
      *
      * Starts catching run-time errors
      *
-     * Only active in the browser's window.
-     * In node.js, the ServerNode Error Manager is active.
-     *
      * @param {NodeGameClient} node Reference to the active node object.
      */
     ErrorManager.prototype.init = function(node) {
         var that;
-        that = this;
-        if (!J.isNodeJS()) {
+        if (J.isNodeJS()) {
+            that = this;
+            process.on('uncaughtException', function(err) {
+                that.lastError = err;
+                node.err('Caught exception: ' + err);
+                if (node.debug) {
+                    throw err;
+                }
+            });
+        }
+        else {
             window.onerror = function(msg, url, linenumber) {
                 var msg;
                 msg = url + ' ' + linenumber + ': ' + msg;
-                that.lastError = msg;
+                this.lastError = msg;
                 node.err(msg);
                 return !node.debug;
             };
         }
-//         else {
-//             process.on('uncaughtException', function(err) {
-//                 that.lastError = err;
-//                 node.err('Caught exception: ' + err);
-//                 if (node.debug) {
-//                     throw err;
-//                 }
-//             });
-//         }
-    };
+    }
 
     /**
      * ## NodeGameRuntimeError
@@ -8876,10 +8842,8 @@ if (!JSON) {
     }
 
     NodeGameStageCallbackError.prototype = new Error();
-    NodeGameStageCallbackError.prototype.constructor =
-        NodeGameStageCallbackError;
-    NodeGameStageCallbackError.prototype.name =
-        'NodeGameStageCallbackError';
+    NodeGameStageCallbackError.prototype.constructor = NodeGameStageCallbackError;
+    NodeGameStageCallbackError.prototype.name = 'NodeGameStageCallbackError';
 
 
     /**
@@ -8895,10 +8859,8 @@ if (!JSON) {
     }
 
     NodeGameMisconfiguredGameError.prototype = new Error();
-    NodeGameMisconfiguredGameError.prototype.constructor =
-        NodeGameMisconfiguredGameError;
-    NodeGameMisconfiguredGameError.prototype.name =
-        'NodeGameMisconfiguredGameError';
+    NodeGameMisconfiguredGameError.prototype.constructor = NodeGameMisconfiguredGameError;
+    NodeGameMisconfiguredGameError.prototype.name = 'NodeGameMisconfiguredGameError';
 
 
     /**
@@ -8914,10 +8876,8 @@ if (!JSON) {
     }
 
     NodeGameIllegalOperationError.prototype = new Error();
-    NodeGameIllegalOperationError.prototype.constructor =
-        NodeGameIllegalOperationError;
-    NodeGameIllegalOperationError.prototype.name =
-        'NodeGameIllegalOperationError';
+    NodeGameIllegalOperationError.prototype.constructor = NodeGameIllegalOperationError;
+    NodeGameIllegalOperationError.prototype.name = 'NodeGameIllegalOperationError';
 
 // ## Closure
 })(
@@ -9558,7 +9518,7 @@ if (!JSON) {
         }
 
         // cleaning up the events to remit
-        // TODO NDDB commands have changed, update
+        // @TODO NDDB commands have changed, update
         if (discard) {
             db.select('event', 'in', discard).remove();
         }
@@ -10863,7 +10823,7 @@ if (!JSON) {
      *
      * @return {string} A compact string representing the message
      *
-     * TODO: Create an hash method as for GameStage
+     * @TODO: Create an hash method as for GameStage
      */
     GameMsg.prototype.toSMS = function() {
 
@@ -10972,7 +10932,6 @@ if (!JSON) {
      * Called by the constructor.
      */
     Stager.prototype.clear = function() {
-
         /**
          * ### Stager.steps
          *
@@ -10998,6 +10957,7 @@ if (!JSON) {
          */
         this.stages = {};
 
+
         /**
          * ### Stager.sequence
          *
@@ -11012,6 +10972,7 @@ if (!JSON) {
          * @see Stager.doLoop
          */
         this.sequence = [];
+
 
         /**
          * ### Stager.generalNextFunction
@@ -11039,6 +11000,7 @@ if (!JSON) {
          */
         this.nextFunctions = {};
 
+
         /**
          * ### Stager.defaultStepRule
          *
@@ -11053,6 +11015,7 @@ if (!JSON) {
          * @see GamePlot.getStepRule
          */
         this.setDefaultStepRule();
+
 
         /**
          * ### Stager.defaultGlobals
@@ -11123,7 +11086,7 @@ if (!JSON) {
      */
     Stager.prototype.registerGeneralNext = function(func) {
         if (func !== null && 'function' !== typeof func) {
-            throw new TypError('Stager.registerGeneralNext: ' +
+            throw new TypeError('Stager.registerGeneralNext: ' +
                                'func must be function or undefined.');
         }
         this.generalNextFunction = func;
@@ -11525,33 +11488,6 @@ if (!JSON) {
                             stageId + '.');
         }
         J.mixin(this.stages[stageId], update);
-    };
-
-    /**
-     * ### Stager.skip
-     *
-     * Removes one stage from the sequence.
-     *
-     * @param {string} stageId The id of the stage to remove from sequence.
-     * @see Stager.addStage
-     */
-    Stager.prototype.skip = function(stageId) {
-        var i, len;
-        if ('string' !== typeof stageId) {
-            throw new TypeError('Stager.skip: stageId must be a string.');
-        }
-        if (!this.stages[stageId]) {
-            throw new Error('Stager.skip: stageId not found: ' +
-                            stageId + '.');
-        }
-
-        i = -1, len = this.sequence.length;
-        for ( ; ++i < len ; ) {
-            if (this.sequence[i].id === stageId) {
-                this.sequence.splice(i,1);
-                break;
-            }
-        }
     };
 
     /**
@@ -12882,7 +12818,7 @@ if (!JSON) {
      * Looks up and build the _globals_ object for the specified game stage
      *
      * Globals properties are mixed in at each level (defaults, stage, step)
-     * to form the complete set of globals available for the specified
+     * to form the complete set of globals available for the specified 
      * game stage.
      *
      * @param {GameStage|string} gameStage The GameStage object,
@@ -12902,11 +12838,11 @@ if (!JSON) {
 
         // Look in Stager's defaults:
         J.mixin(globals, this.stager.getDefaultGlobals());
-
+        
         // Look in current stage:
         stepstage = this.getStage(gameStage);
         if (stepstage) J.mixin(globals, stepstage.globals);
-
+        
         // Look in current step:
         stepstage = this.getStep(gameStage);
         if (stepstage) J.mixin(globals, stepstage.globals);
@@ -13333,19 +13269,14 @@ if (!JSON) {
     // ## Global scope
 
     var GameMsg = parent.GameMsg,
+    GameMsgGenerator = parent.GameMsgGenerator,
     SocketFactory = parent.SocketFactory,
-    J = parent.JSUS;
+    J = parent.JSUS,
+    constants = parent.constants;
 
     var action = parent.action;
 
-    /**
-     * ## Socket constructor
-     *
-     * Creates a new instance of Socket
-     *
-     * @param {NodeGameClient} node Reference to the node instance
-     */
-    function Socket(node) {
+    function Socket(node, options) {
 
         // ## Private properties
 
@@ -13391,27 +13322,11 @@ if (!JSON) {
          *
          * Socket connection established.
          *
-         * @see Socket.connecting
          * @see Socket.isConnected
          * @see Socket.onConnect
          * @see Socket.onDisconnect
          */
         this.connected = false;
-
-         /**
-         * ### Socket.connecting
-         *
-         * Socket connection being established
-         *
-         * TODO see whether we should merge connected / connecting
-         * in one variable with socket states.
-         *
-         * @see Socket.connected
-         * @see Socket.isConnected
-         * @see Socket.onConnect
-         * @see Socket.onDisconnect
-         */
-        this.connecting = false;
 
         /**
          * ### Socket.url
@@ -13423,8 +13338,6 @@ if (!JSON) {
          */
         this.url = null;
 
-        // Experimental Journal.
-        // TODO: check if we need it.
 
         this.journalOn = false;
 
@@ -13448,7 +13361,6 @@ if (!JSON) {
                 }
             });
         }
-        // End Experimental Code.
 
         /**
          * ### Socket.node
@@ -13463,7 +13375,7 @@ if (!JSON) {
     /**
      * ### Socket.setup
      *
-     * Configures the socket
+     * Configure the socket.
      *
      * @param {object} options Optional. Configuration options.
      * @see node.setup.socket
@@ -13482,7 +13394,7 @@ if (!JSON) {
     /**
      * ### Socket.setSocketType
      *
-     * Sets the default socket by requesting it to the Socket Factory
+     * Set the default socket by requesting it to the Socket Factory.
      *
      * Supported types: 'Direct', 'SocketIo'.
      *
@@ -13499,65 +13411,35 @@ if (!JSON) {
     /**
      * ### Socket.connect
      *
-     * Calls the connect method on the actual socket object
+     * Calls the connect method on the actual socket object.
      *
-     * Uri is usually empty when using SocketDirect.
-     *
-     * @param {string} uri Optional. The uri to which to connect.
+     * @param {string} uri The uri to which to connect.
      * @param {object} options Optional. Configuration options for the socket.
      */
     Socket.prototype.connect = function(uri, options) {
-        var humanReadableUri;
-
-        if (uri && 'string' !== typeof uri) {
-            throw new TypeError('Socket.connect: uri must be string or ' +
-                                'undefined.');
-        }
-        if (options && 'object' !== typeof options) {
-            throw new TypeError('Socket.connect: options must be object or ' +
-                                'undefined.');
-        }
-        if (this.connected) {
-            throw new Error('Socket.connect: socket is already connected. ' +
-                            'Only one connection is allowed.');
-        }
-        if (this.connecting) {
-            throw new Error('Socket.connecting: one connection attempt is ' +
-                            'already in progress. Please try again later.');
-        }
-
-        humanReadableUri = uri || 'local server';
-
+        var humanReadableUri = uri || 'local server';
         if (!this.socket) {
-            throw new Error('Socket.connet: cannot connet to ' +
-                            humanReadableUri + ' . No socket defined.');
+            this.node.err('Socket.connet: cannot connet to ' +
+                          humanReadableUri + ' . No socket defined.');
+            return false;
         }
-        this.connecting = true;
+
         this.url = uri;
         this.node.log('connecting to ' + humanReadableUri + '.');
-        this.socket.connect(uri, options || this.userOptions);
-    };
 
-    /**
-     * ### Socket.disconnect
-     *
-     * Calls the disconnect method on the actual socket object
-     */
-    Socket.prototype.disconnect = function() {
-        this.socket.disconnect();
+        this.socket.connect(uri, 'undefined' !== typeof options ?
+                            options : this.userOptions);
     };
-
 
     /**
      * ### Socket.onConnect
      *
-     * Handler for connections to the server
+     * Handler for connections to the server.
      *
      * @emit SOCKET_CONNECT
      */
     Socket.prototype.onConnect = function() {
         this.connected = true;
-        this.connecting = false;
         this.node.emit('SOCKET_CONNECT');
         this.node.log('socket connected.');
     };
@@ -13565,7 +13447,7 @@ if (!JSON) {
     /**
      * ### Socket.onDisconnect
      *
-     * Handler for disconnections from the server
+     * Handler for disconnections from the server.
      *
      * Clears the player and monitor lists.
      *
@@ -13573,7 +13455,6 @@ if (!JSON) {
      */
     Socket.prototype.onDisconnect = function() {
         this.connected = false;
-        this.conecting = false;
         node.emit('SOCKET_DISCONNECT');
         // Save the current stage of the game
         //this.node.session.store();
@@ -13619,16 +13500,18 @@ if (!JSON) {
      */
     Socket.prototype.validateIncomingMsg = function(gameMsg) {
         if (this.session && gameMsg.session !== this.session) {
+            console.log(this.session, gameMsg.session);
+            console.log(gameMsg);
             return logSecureParseError.call(this, 'mismatched session in ' +
                                             'incoming message.');
         }
         return gameMsg;
-    };
+    }
 
     /**
      * ### Socket.onMessage
      *
-     * Initial handler for incoming messages from the server
+     * Initial handler for incoming messages from the server.
      *
      * This handler will be replaced by the FULL handler, upon receiving
      * a HI message from the server.
@@ -13664,7 +13547,7 @@ if (!JSON) {
     /**
      * ### Socket.onMessageFull
      *
-     * Full handler for incoming messages from the server
+     * Full handler for incoming messages from the server.
      *
      * All parsed messages are either emitted immediately or buffered,
      * if the game is not ready, and the message priority is low.x
@@ -13845,7 +13728,7 @@ if (!JSON) {
     /**
      * ### Socket.send
      *
-     * Pushes a message into the socket
+     * Pushes a message into the socket.
      *
      * The msg is actually received by the client itself as well.
      *
@@ -13923,56 +13806,23 @@ if (!JSON) {
     var GameMsg = node.GameMsg,
     Player = node.Player,
     GameMsgGenerator = node.GameMsgGenerator,
-    J = node.JSUS;
+    constants = node.constants;
 
     exports.SocketIo = SocketIo;
 
-    /**
-     * ## SocketIo constructor
-     *
-     * Creates a new instance of SocketIo
-     *
-     * @param {NodeGameClient} node Reference to the node instance
-     */
-    function SocketIo(node) {
-
-        // ## Private properties
-
-        /**
-         * ### SocketIo.node
-         *
-         * Reference to the node object.
-         */
+    function SocketIo(node, options) {
         this.node = node;
-
-        /**
-         * ### Socket.socket
-         *
-         * Reference to the actual socket-io socket created on connection
-         */
         this.socket = null;
     }
 
-    /**
-     * ### SocketIo.connect
-     *
-     * Establishes a socket-io connection with a server
-     *
-     * Sets the on: 'connect', 'message', 'disconnect' event listeners.
-     *
-     * @param {string} url The address of the server channel
-     * @param {object} options Optional. Configuration options
-     */
     SocketIo.prototype.connect = function(url, options) {
         var node, socket;
         node = this.node;
 
-        if ('string' !== typeof url) {
-            throw TypeError('SocketIO.connect: url must be string.');
+        if (!url) {
+            node.err('cannot connect to empty url.', 'ERR');
+            return false;
         }
-
-        // See https://github.com/Automattic/socket.io-client/issues/251
-        J.mixin(options, { 'force new connection': true });
 
         socket = io.connect(url, options); //conf.io
 
@@ -13980,9 +13830,19 @@ if (!JSON) {
             node.info('socket.io connection open');
             node.socket.onConnect.call(node.socket);
             socket.on('message', function(msg) {
+                debugger;
                 msg = node.socket.secureParse(msg);
                 if (msg) {
                     node.socket.onMessage(msg);
+                    if (msg.reliable) {
+                        // send ACK
+                        var ack = new GameMsgGenerator(node).create({
+                            target: constants.target.ACK,
+                            text: msg.id,
+                        });
+
+                        this.send(ack);
+                    }
                 }
             });
         });
@@ -13994,38 +13854,15 @@ if (!JSON) {
         this.socket = socket;
 
         return true;
+
     };
 
-    /**
-     * ### SocketIo.disconnect
-     *
-     * Triggers the disconnection from a server
-     */
-    SocketIo.prototype.disconnect = function() {
-        this.socket.disconnect();
-    };
-
-    /**
-     * ### SocketIo.isConnected
-     *
-     * Returns TRUE, if currently connected
-     */
     SocketIo.prototype.isConnected = function() {
         return this.socket &&
             this.socket.socket &&
             this.socket.socket.connected;
     };
 
-    /**
-     * ### SocketIo.send
-     *
-     * Stringifies and send a message through the socket-io socket
-     *
-     * @param {object} msg Object implementing a stringiy method. Usually,
-     *    a game message.
-     *
-     * @see GameMessage
-     */
     SocketIo.prototype.send = function(msg) {
         this.socket.send(msg.stringify());
     };
@@ -14602,12 +14439,7 @@ if (!JSON) {
      * Calls the init function, and steps.
      *
      * Important: it does not use `Game.publishUpdate` because that is
-     * just for change of state after the game has started.
-     *
-     * @param {object} options Optional. Configuration object. Fields:
-     *
-     *   - step: true/false. If false, jus call the init function, and
-     *     does not enter the first step. Default, TRUE.
+     * just for change of state after the game has started
      */
     Game.prototype.start = function(options) {
         var onInit, node, startStage;
@@ -14631,14 +14463,9 @@ if (!JSON) {
             throw new Error('Game.start: game cannot be started.');
         }
 
-        // Starts from beginning (default) or from a predefined stage
-        // This options is useful when a player reconnets.
-        startStage = options.startStage || new GameStage();
-
         // INIT the game.
         if (this.plot && this.plot.stager) {
             onInit = this.plot.stager.getOnInit();
-            this.globals = this.plot.getGlobals(startStage);
             if (onInit) {
                 this.setStateLevel(constants.stateLevels.INITIALIZING);
                 node.emit('INIT');
@@ -14646,6 +14473,10 @@ if (!JSON) {
             }
         }
         this.setStateLevel(constants.stateLevels.INITIALIZED);
+
+        // Starts from beginning (default) or from a predefined stage
+        // This options is useful when a player reconnets.
+        startStage = options.startStage || new GameStage();
 
         this.setCurrentGameStage(startStage, true);
 
@@ -14765,7 +14596,7 @@ if (!JSON) {
      *
      * Experimental. Sets the game to pause
      *
-     * TODO: check with Game.ready
+     * @TODO: check with Game.ready
      */
     Game.prototype.pause = function() {
         var msgHandler, node;
@@ -14804,7 +14635,7 @@ if (!JSON) {
      *
      * Experimental. Resumes the game from a pause
      *
-     * TODO: check with Game.ready
+     * @TODO: check with Game.ready
      */
     Game.prototype.resume = function() {
         var msgHandler, node;
@@ -14972,7 +14803,7 @@ if (!JSON) {
             return null;
         }
         else {
-            // TODO maybe update also in case of string.
+            // TODO maybe update also in case of string
 
             node.emit('STEPPING');
 
@@ -17865,7 +17696,7 @@ if (!JSON) {
     /**
      * ### Timer.randomExec
      *
-     * Executes a callback function after a random time interval
+     * Executes a callback function after a random time interval between 0 and maxWait
      *
      * Respects pausing / resuming.
      *
@@ -18074,7 +17905,7 @@ if (!JSON) {
         // TODO: update and milliseconds must be multiple now
         if (options.hooks) {
             len = options.hooks.length;
-            for (i = 0; i < len; i++) {
+            for (i = 0; i < len; i++){
                 this.addHook(options.hooks[i]);
             }
         }
@@ -18956,7 +18787,7 @@ if (!JSON) {
          */
         this.registerSetup('lang', function(language) {
             if (!language) return null;
-            return this.setLanguage(language);
+            return this.setLanguage(language);            
         });
 
         // Utility for setup.plist and setup.mlist:
@@ -19068,7 +18899,7 @@ if (!JSON) {
 
         // ### node.on.txt
         this.alias('txt', 'in.say.TXT');
-
+        
         // ### node.on.data
         this.alias('data', ['in.say.DATA', 'in.set.DATA'], function(text, cb) {
             return function(msg) {
@@ -19439,7 +19270,7 @@ if (!JSON) {
      *
      * 	node.on.data('myLabel', function(){ ... };
      * 	node.once.data('myLabel', function(){ ... };
-     * ```
+     * ```	
      *
      * @param {string} alias The name of alias
      * @param {string|array} events The event/s under which the listeners
@@ -19485,7 +19316,7 @@ if (!JSON) {
             // Otherwise, we assume the first parameter is the callback.
             if (modifier) {
                 func = modifier.apply(that.game, arguments);
-            }
+            } 
             J.each(events, function(event) {
                 that.once(event, function() {
                     func.apply(that.game, arguments);
@@ -19699,7 +19530,7 @@ if (!JSON) {
 //         ee = this.getCurrentEventEmitter();
 //         ee.on(event, listener);
 //     };
-//
+// 
 //     /**
 //      * ### NodeGameClient.once
 //      *
@@ -19724,7 +19555,7 @@ if (!JSON) {
 //         ee.on(event, listener);
 //         ee.on(event, cbRemove);
 //     };
-//
+// 
 //     /**
 //      * ### NodeGameClient.off
 //      *
@@ -20432,9 +20263,9 @@ if (!JSON) {
          * ## in.get.DATA
          *
          * Re-emits the incoming message, and replies back to the sender
-         *
+         * 
          * Does the following operations:
-         *
+         * 
          * - Validates the msg.text field
          * - Emits a get.<msg.text> event
          * - Replies to the sender with with the return values of the emit call
@@ -20831,9 +20662,9 @@ if (!JSON) {
          */
         this.events.ng.on('PLAYING', function() {
             var currentTime;
-            node.emit('BEFORE_PLAYING');
             node.game.setStageLevel(stageLevels.PLAYING);
             node.socket.clearBuffer();
+            node.emit('BEFORE_PLAYING');
             // Last thing to do, is to store time:
             currentTime = (new Date()).getTime();
             node.timer.setTimestamp(node.game.getCurrentGameStage().toString(),
@@ -22055,15 +21886,10 @@ if (!JSON) {
         if (!iframe) {
             throw new Error('GameWindow.clearFrame: cannot detect frame.');
         }
-
         frameName = iframe.name || iframe.id;
         iframe.onload = null;
-
         // Method .replace does not add the uri to the history.
-        //iframe.contentWindow.location.replace('about:blank');
-
-        this.getFrameDocument().documentElement.innerHTML = '';
-
+        iframe.contentWindow.location.replace('about:blank');
         this.frameElement = iframe;
         this.frameWindow = window.frames[frameName];
         this.frameDocument = W.getIFrameDocument(iframe);
@@ -22626,7 +22452,7 @@ if (!JSON) {
      * Warning: Security policies may block this method if the content is
      * coming from another domain.
      * Notice: If called multiple times within the same stage/step, it will
-     * cause the `VisualTimer` widget to reload the timer.
+     * the `VisualTimer` widget to reload the timer.
      *
      * @param {string} uri The uri to load
      * @param {function} func Optional. The function to call once the DOM is
@@ -22778,7 +22604,7 @@ if (!JSON) {
             // would be cleared once the iframe becomes ready.  In that case,
             // iframe.onload handles the filling of the contents.
             if (frameReady) {
-                // Handles caching.
+                // Handles chaching.
                 handleFrameLoad(this, uri, iframe, iframeName, loadCache,
                                 storeCacheNow);
 
@@ -22970,7 +22796,8 @@ if (!JSON) {
      *
      * Injects scripts into the iframe
      *
-     * Inserts `<script class="injectedlib" src="...">` lines into given
+     * First removes all old injected script tags.
+     * Then injects `<script class="injectedlib" src="...">` lines into given
      * iframe object, one for every given library.
      *
      * @param {HTMLIFrameElement} iframe The target iframe
@@ -23030,8 +22857,7 @@ if (!JSON) {
      * The frame element must exists or an error will be thrown.
      *
      * @param {GameWindow} W The current GameWindow object
-     * @param {string} oldHeaderPos Optional. The previous position of the
-     *   header
+     * @param {string} W Optional. The previous position of the header
      *
      * @api private
      */
@@ -25792,7 +25618,7 @@ if (!JSON) {
         this.widgets = {};
 
         /**
-         * ### Widgets.instances
+         * ### Widgets.widgets
          *
          * Container of appended widget instances
          *
@@ -25847,7 +25673,6 @@ if (!JSON) {
      * @param {string} w_str The name of the widget to load
      * @param {options} options Optional. Configuration options
      *   to be passed to the widgets
-     *
      * @return {object} widget The requested widget
      *
      * @see Widgets.add
@@ -25915,13 +25740,15 @@ if (!JSON) {
      * In the latter case, dependencies are checked, and it returns FALSE if
      * conditions are not met.
      *
-     * @param {string|object} w The name of the widget to load or a loaded
-     *   widget object
-     * @param {object} root Optional. The HTML element under which the widget
-     *   will be appended. Default: `GameWindow.getFrameRoot()` or
-     *   `document.body`
+     * It automatically creates a fieldset element around the widget if
+     * requested by the internal widget configuration, or if specified in the
+     * options parameter.
+     *
+     * @param {string} w_str The name of the widget to load
+     * @param {object} root. Optional. The HTML element under which the widget
+     *   will be appended. Default: `GameWindow.getFrameRoot()` or document.body
      * @param {options} options Optional. Configuration options to be passed
-     *   to the widget
+     *   to the widgets
      *
      * @return {object|boolean} The requested widget, or FALSE is an error
      *   occurs
@@ -25953,6 +25780,12 @@ if (!JSON) {
             w = this.get(w, options);
         }
 
+        // If fieldset option is null, a div is added instead.
+        // If fieldset option is undefined, default options are used.
+        //if (options.fieldset !== null) {
+        //    root = appendFieldset(root, options.fieldset ||
+        //                          w.defaults.fieldset, w);
+        //}
         w.panelDiv = appendDiv(root, {
             attributes: {
                 className: ['ng_widget', 'panel', 'panel-default', w.className]
@@ -26032,7 +25865,7 @@ if (!JSON) {
      *
      * TODO: Check for version and other constraints.
      *
-     * @param {object} w The widget to check
+     * @param {object} The widget to check
      * @param {boolean} quiet Optional. If TRUE, no warning will be raised.
      *   Default: FALSE
      * @return {boolean} TRUE, if all dependencies are met
@@ -26064,6 +25897,14 @@ if (!JSON) {
 
 
     // ## Helper functions
+
+    //function appendFieldset(root, options, w) {
+    //    var idFieldset, legend;
+    //    if (!options) return root;
+    //    idFieldset = options.id || w.id + '_fieldset';
+    //    legend = options.legend || w.legend;
+    //    return W.addFieldset(root, idFieldset, legend, options.attributes);
+    //}
 
     function appendDiv(root, options) {
         // TODO: Check every parameter
@@ -26122,16 +25963,20 @@ if (!JSON) {
 
     var J = node.JSUS;
 
-    node.widgets.register('Chat', Chat);
+    // ## Defaults
+
+    Chat.defaults = {};
+    Chat.defaults.id = 'chat';
+    Chat.defaults.fieldset = { legend: 'Chat' };
+    Chat.defaults.mode = 'MANY_TO_MANY';
+    Chat.defaults.textarea_id = 'chat_textarea';
+    Chat.defaults.chat_id = 'chat_chat';
+    Chat.defaults.chat_event = 'CHAT';
+    Chat.defaults.submit_id = 'chat_submit';
+    Chat.defaults.submit_text = 'chat';
+
 
     // ## Meta-data
-
-    Chat.version = '0.4.1';
-    Chat.description = 'Offers a uni-/bi-directional communication interface ' +
-        'between players, or between players and the experimenter.';
-
-    Chat.title = 'Chat';
-    Chat.className = 'chat';
 
     // ### Chat.modes
     //
@@ -26141,10 +25986,10 @@ if (!JSON) {
     // - MANY_TO_ONE: everybody can see all the messages, private messages can
     //   be received, but not sent.
     //
-    // - ONE_TO_ONE: everybody sees only personal messages, private messages can
+    // ONE_TO_ONE: everybody sees only personal messages, private messages can
     //   be received, but not sent. All messages are sent to the SERVER.
     //
-    // - RECEIVER_ONLY: messages can only be received, but not sent.
+    // RECEIVER_ONLY: messages can only be received, but not sent.
     //
     Chat.modes = {
         MANY_TO_MANY: 'MANY_TO_MANY',
@@ -26153,176 +25998,77 @@ if (!JSON) {
         RECEIVER_ONLY: 'RECEIVER_ONLY'
     };
 
+    Chat.version = '0.4';
+    Chat.description = 'Offers a uni-/bi-directional communication interface ' +
+        'between players, or between players and the experimenter.';
 
     // ## Dependencies
 
     Chat.dependencies = {
         JSUS: {}
-
     };
 
-    /**
-     * ## Chat constructor
-     *
-     * `Chat` is a simple configurable chat
-     *
-     * @param {object} options Optional. Configuration options
-     * which is forwarded to Chat.init.
-     *
-     * @see Chat.init
-     */
     function Chat (options) {
-        /**
-         * ### Chat.mode
-         *
-         * Determines to mode of communication
-         *
-         * @see Chat.modes
-         */
-        this.mode = null;
+        this.id = options.id || Chat.id;
+        this.mode = options.mode || Chat.defaults.mode;
 
-        /**
-         * ### Chat.recipient
-         *
-         * Determines recipient of the messages
-         */
-        this.recipient = null;
+        this.root = null;
 
+        this.textarea_id = options.textarea_id || Chat.defaults.textarea_id;
+        this.chat_id = options.chat_id || Chat.defaults.chat_id;
+        this.submit_id = options.submit_id || Chat.defaults.submit_id;
 
-        /**
-         * ### Chat.textarea
-         *
-         * The textarea wherein to write and read
-         */
-        this.textarea = null;
+        this.chat_event = options.chat_event || Chat.defaults.chat_event;
+        this.submit_text = options.submit_text || Chat.defaults.submit_text;
 
-        /**
-         * ### Chat.textareaId
-         *
-         * The id of the textarea
-         */
-        this.textareaId = null;
+        this.submit = W.getEventButton(this.chat_event, this.submit_text,
+                                       this.submit_id);
+        this.textarea = W.getElement('textarea', this.textarea_id);
+        this.chat = W.getElement('div', this.chat_id);
 
-
-        /**
-         * ### Chat.chat
-         *
-         * The DIV wherein to display the chat
-         */
-        this.chat = null;
-
-        /**
-         * ### Chat.chatId
-         *
-         * The id of the chat DIV
-         */
-        this.chatId = null;
-
-
-        /**
-         * ### Chat.submit
-         *
-         * The submit button
-         */
-        this.submit = null;
-
-        /**
-         * ### Chat.submitId
-         *
-         * The id of the submit butten
-         */
-        this.submitId = null;
-
-        /**
-         * ### Chat.submitText
-         *
-         * The text on the submit button
-         */
-        this.submitText = null;
-
-
-        /**
-         * ### Chat.chatEvent
-         *
-         * The event to fire when sending a message
-         */
-        this.chatEvent = null;
-
-        /**
-         * ### Chat.displayName
-         *
-         * Function which displays the sender's name
-         */
-        this.displayName = null;
-        this.init(options)
-    }
-
-    // ## Chat methods
-
-    /**
-     * ### Chat.init
-     *
-     * Initializes the widget
-     *
-     * @param {object} options Optional. Configuration options.
-     *
-     * The  options object can have the following attributes:
-     *   - `mode`: Determines to mode of communication
-     *   - `textareaId`: The id of the textarea
-     *   - `chatId`: The id of the chat DIV
-     *   - `submitId`: The id of the submit butten
-     *   - `submitText`: The text on the submit button
-     *   - `chatEvent`: The event to fire when sending a message
-     *   - `displayName`: Function which displays the sender's name
-     */
-    Chat.prototype.init = function(options) {
-        options = options || {};
-        this.mode = options.mode || 'MANY_TO_MANY';
-
-        this.textareaId = options.textareaId || 'chat_textarea';
-        this.chatId = options.chatId || 'chat_chat';
-        this.submitId = options.submitId || 'chat_submit';
-
-        this.chatEvent = options.chatEvent || 'CHAT';
-        this.submitText = options.submitText || 'chat';
-
-        this.submit = W.getEventButton(this.chatEvent, this.submitText,
-                                       this.submitId);
-        this.textarea = W.getElement('textarea', this.textareaId);
-        this.chat = W.getElement('div', this.chatId);
-
-        this.displayName = options.displayName || function(from) {
-            return from;
-        };
+        if ('undefined' !== typeof options.displayName) {
+            this.displayName = options.displayName;
+        }
 
         switch(this.mode) {
-            case Chat.modes.RECEIVER_ONLY:
-                this.recipient = {value: 'SERVER'};
-                break;
-            case Chat.modes.MANY_TO_ONE:
-                this.recipient = {value: 'ROOM'};
-                break;
-            case Chat.modes.ONE_TO_ONE:
-                this.recipient = {value: 'SERVER'};
-                break;
-            default:
-                this.recipient = W.getRecipientSelector();
+
+        case Chat.modes.RECEIVER_ONLY:
+            this.recipient = {value: 'SERVER'};
+            break;
+        case Chat.modes.MANY_TO_ONE:
+            this.recipient = {value: 'ROOM'};
+            break;
+        case Chat.modes.ONE_TO_ONE:
+            this.recipient = {value: 'SERVER'};
+            break;
+        default:
+            this.recipient = W.getRecipientSelector();
         }
-    };
+    }
 
 
-    Chat.prototype.append = function() {
-        this.bodyDiv.appendChild(this.chat);
+    Chat.prototype.append = function(root) {
+        this.root = root;
+        root.appendChild(this.chat);
 
         if (this.mode !== Chat.modes.RECEIVER_ONLY) {
-            W.writeln('', this.bodyDiv);
-            this.bodyDiv.appendChild(this.textarea);
-            W.writeln('', this.bodyDiv);
-            this.bodyDiv.appendChild(this.submit);
+            W.writeln('', root);
+            root.appendChild(this.textarea);
+            W.writeln('', root);
+            root.appendChild(this.submit);
             if (this.mode === Chat.modes.MANY_TO_MANY) {
-                this.bodyDiv.appendChild(this.recipient);
+                root.appendChild(this.recipient);
             }
         }
+        return root;
+    };
+
+    Chat.prototype.getRoot = function() {
+        return this.root;
+    };
+
+    Chat.prototype.displayName = function(from) {
+        return from;
     };
 
     Chat.prototype.readTA = function() {
@@ -26340,7 +26086,7 @@ if (!JSON) {
     Chat.prototype.listeners = function() {
         var that = this;
 
-        node.on(this.chatEvent, function() {
+        node.on(this.chat_event, function() {
             var msg, to, args;
             msg = that.readTA();
             if (!msg) return;
@@ -26356,7 +26102,7 @@ if (!JSON) {
                 '!txt': msg
             };
             that.writeTA('%sMe%s: %msg!txt%msg', args);
-            node.say(that.chatEvent, to, msg.trim());
+            node.say(that.chat_event, to, msg.trim());
         });
 
         if (this.mode === Chat.modes.MANY_TO_MANY) {
@@ -26366,7 +26112,7 @@ if (!JSON) {
             });
         }
 
-        node.on.data(this.chatEvent, function(msg) {
+        node.on.data(this.chat_event, function(msg) {
             var from, args;
             if (msg.from === node.player.id || msg.from === node.player.sid) {
                 return;
@@ -26394,6 +26140,8 @@ if (!JSON) {
         });
     };
 
+    node.widgets.register('Chat', Chat);
+
 })(node);
 
 /**
@@ -26409,21 +26157,24 @@ if (!JSON) {
 
     "use strict";
 
-    var J = node.JSUS;
-    var Table = node.window.Table;
+    var JSUS = node.JSUS,
+    Table = node.window.Table;
 
     node.widgets.register('ChernoffFaces', ChernoffFaces);
 
+    // ## Defaults
 
+    ChernoffFaces.defaults = {};
+    ChernoffFaces.defaults.id = 'ChernoffFaces';
+    ChernoffFaces.defaults.canvas = {};
+    ChernoffFaces.defaults.canvas.width = 100;
+    ChernoffFaces.defaults.canvas.heigth = 100;
 
     // ## Meta-data
 
-    ChernoffFaces.version = '0.3.1';
+    ChernoffFaces.version = '0.3';
     ChernoffFaces.description =
         'Display parametric data in the form of a Chernoff Face.';
-
-    ChernoffFaces.title = 'ChernoffFaces';
-    ChernoffFaces.className = 'chernofffaces';
 
     // ## Dependencies
     ChernoffFaces.dependencies = {
@@ -26435,21 +26186,20 @@ if (!JSON) {
 
     ChernoffFaces.FaceVector = FaceVector;
     ChernoffFaces.FacePainter = FacePainter;
-    ChernoffFaces.width = 100;
-    ChernoffFaces.height = 100;
 
     function ChernoffFaces (options) {
-        var that = this;
-
         this.options = options;
+        this.id = options.id;
         this.table = new Table({id: 'cf_table'});
+        this.root = options.root || document.createElement('div');
+        this.root.id = this.id;
 
         this.sc = node.widgets.get('Controls.Slider');  // Slider Controls
         this.fp = null; // Face Painter
         this.canvas = null;
 
         this.change = 'CF_CHANGE';
-
+        var that = this;
         this.changeFunc = function() {
             that.draw(that.sc.getAllValues());
         };
@@ -26462,6 +26212,8 @@ if (!JSON) {
 
     ChernoffFaces.prototype.init = function(options) {
         var that = this;
+        this.id = options.id || this.id;
+        var PREF = this.id + '_';
 
         this.features = options.features || this.features ||
                         FaceVector.random();
@@ -26469,15 +26221,21 @@ if (!JSON) {
         this.controls = ('undefined' !== typeof options.controls) ?
             options.controls : true;
 
-        this.canvas = node.window.getCanvas('ChernoffFaces_canvas', options.canvas);
+        var idCanvas = (options.idCanvas) ? options.idCanvas : PREF + 'canvas';
+        var idButton = (options.idButton) ? options.idButton : PREF + 'button';
+
+        this.canvas = node.window.getCanvas(idCanvas, options.canvas);
         this.fp = new FacePainter(this.canvas);
         this.fp.draw(new FaceVector(this.features));
 
         var sc_options = {
             id: 'cf_controls',
-            features: J.mergeOnKey(FaceVector.defaults, this.features,
+            features: JSUS.mergeOnKey(FaceVector.defaults, this.features,
                                       'value'),
             change: this.change,
+            fieldset: {id: this.id + '_controls_fieldest',
+                       legend: this.controls.legend || 'Controls'
+                      },
             submit: 'Send'
         };
 
@@ -26502,21 +26260,19 @@ if (!JSON) {
         }
 
 
-        this.someDiv = document.createElement('div');
-        this.someDiv.appendChild(this.table.table);
-
-
         this.table.add(this.canvas);
         this.table.parse();
+        this.root.appendChild(this.table.table);
     };
 
     ChernoffFaces.prototype.getCanvas = function() {
         return this.canvas;
     };
 
-    ChernoffFaces.prototype.append = function() {
-        this.bodyDiv.appendChild(this.someDiv);
+    ChernoffFaces.prototype.append = function(root) {
+        root.appendChild(this.root);
         this.table.parse();
+        return this.root;
     };
 
     ChernoffFaces.prototype.draw = function(features) {
@@ -26525,7 +26281,7 @@ if (!JSON) {
         this.fp.redraw(fv);
         // Without merging wrong values are passed as attributes
         this.sc.init({
-            features: J.mergeOnKey(FaceVector.defaults, features, 'value')
+            features: JSUS.mergeOnKey(FaceVector.defaults, features, 'value')
         });
         this.sc.refresh();
     };
@@ -26540,7 +26296,7 @@ if (!JSON) {
         this.fp.redraw(fv);
 
         var sc_options = {
-            features: J.mergeOnValue(FaceVector.defaults, fv),
+            features: JSUS.mergeOnValue(FaceVector.defaults, fv),
             change: this.change
         };
         this.sc.init(sc_options);
@@ -26556,8 +26312,8 @@ if (!JSON) {
 
         this.canvas = new node.window.Canvas(canvas);
 
-        this.scaleX = canvas.width / ChernoffFaces.width;
-        this.scaleY = canvas.height / ChernoffFaces.heigth;
+        this.scaleX = canvas.width / ChernoffFaces.defaults.canvas.width;
+        this.scaleY = canvas.height / ChernoffFaces.defaults.canvas.heigth;
     }
 
     //Draws a Chernoff face.
@@ -26602,7 +26358,7 @@ if (!JSON) {
             return;
         }
 
-        var ratio;
+        var ration;
         if (this.canvas.width > this.canvas.height) {
             ratio = this.canvas.width / face.head_radius * face.head_scale_x;
         }
@@ -26785,6 +26541,8 @@ if (!JSON) {
      * 1 that completely describe a Chernoff face.
      *
      */
+
+
     FaceVector.defaults = {
         // Head
         head_radius: {
@@ -26946,41 +26704,7 @@ if (!JSON) {
             step: 0.01,
             value: 20,
             label: 'Lower lip'
-        },
-
-        scaleX: {
-            min: 0,
-            max: 20,
-            step: 0.01,
-            value: 0.2,
-            label: 'Scale X'
-        },
-
-        scaleY: {
-            min: 0,
-            max: 20,
-            step: 0.01,
-            value: 0.2,
-            label: 'Scale Y'
-        },
-
-        color: {
-            min: 0,
-            max: 20,
-            step: 0.01,
-            value: 0.2,
-            label: 'color'
-        },
-
-        lineWidth: {
-            min: 0,
-            max: 20,
-            step: 0.01,
-            value: 0.2,
-            label: 'lineWidth'
         }
-
-
     };
 
     //Constructs a random face vector.
@@ -26988,7 +26712,7 @@ if (!JSON) {
         var out = {};
         for (var key in FaceVector.defaults) {
             if (FaceVector.defaults.hasOwnProperty(key)) {
-                if (!J.in_array(key,
+                if (!JSUS.in_array(key,
                             ['color', 'lineWidth', 'scaleX', 'scaleY'])) {
 
                     out[key] = FaceVector.defaults[key].min +
@@ -27000,7 +26724,7 @@ if (!JSON) {
         out.scaleX = 1;
         out.scaleY = 1;
 
-        out.color = 'red';
+        out.color = 'green';
         out.lineWidth = 1;
 
         return new FaceVector(out);
@@ -27760,75 +27484,33 @@ if (!JSON) {
 
     // TODO: handle different events, beside onchange
 
-    var J = node.JSUS;
-    var sliderControls = SliderControls;
-    var jQuerySlider = jQuerySliderControls;
-    var radioControls = RadioControls;
-
-
     node.widgets.register('Controls', Controls);
 
+    // ## Defaults
 
+    var defaults = { id: 'controls' };
+
+    Controls.defaults = defaults;
+
+    Controls.Slider = SliderControls;
+    Controls.jQuerySlider = jQuerySliderControls;
+    Controls.Radio = RadioControls;
 
     // ## Meta-data
 
-    Controls.version = '0.3.1';
+    Controls.version = '0.3';
     Controls.description = 'Wraps a collection of user-inputs controls.';
 
-    Controls.title = 'Controls';
-    Controls.className = 'controls';
-
-    /**
-     * ## Controls constructor
-     *
-     * `Control` wraps a collection of user-input controls
-     *
-     * @param {object} options Optional. Configuration options
-     * which is stored and forwarded to Controls.init.
-     *
-     *  The  options object can have the following attributes:
-     *   - Any option that can be passed to `node.window.List` constructor.
-     *   - `change`: Event to fire when contents change.
-     *   - `features`: Collection of collection attributes for individual
-     *                 controls.
-     *   - `submit`: Description of the submit button.
-     *               If submit.id is defined, the button will get that id and
-     *               the text on the button will be the text in submit.name.
-     *               If submit is a string, it will be the text on the button.
-     *   - `attributes`: Attributes of the submit button.
-     *
-     * @see Controls.init
-     */
     function Controls(options) {
         this.options = options;
+        this.id = 'undefined' !== typeof options.id ? options.id : 'controls';
+        this.root = null;
 
-        /**
-         * ### Controls.listRoot
-         *
-         * The list which holds the controls
-         */
         this.listRoot = null;
-
-        /**
-         * ### Controls.submit
-         *
-         * The submit button
-         */
+        this.fieldset = null;
         this.submit = null;
 
-        /**
-         * ### Controls.changeEvent
-         *
-         * The event to be fired when the list changes
-         */
-        this.changeEvent = 'Controls_change';
-
-        /**
-         * ### Controls.hasChanged
-         *
-         * Flag to indicate whether the list has changed
-         */
-        this.hasChanged = false;
+        this.changeEvent = this.id + '_change';
 
         this.init(options);
     }
@@ -27843,27 +27525,11 @@ if (!JSON) {
         //return node.window.getTextInput(id, attributes);
     };
 
-    // ## Controls methods
-
-    /**
-     * ### Controls.init
-     *
-     * Initializes the widget
-     *
-     * @param {object} options Optional. Configuration options.
-     *
-     *  The  options object can have the following attributes:
-     *   - Any option that can be passed to `node.window.List` constructor.
-     *   - `change`: Event to fire when contents change.
-     *   - `features`: Collection of collection attributes for individual
-     *                 controls.
-     *
-     * @see nodegame-window/List
-     */
     Controls.prototype.init = function(options) {
+
         this.hasChanged = false; // TODO: should this be inherited?
         if ('undefined' !== typeof options.change) {
-            if (!options.change) {
+            if (!options.change){
                 this.changeEvent = false;
             }
             else {
@@ -27873,59 +27539,45 @@ if (!JSON) {
         this.list = new node.window.List(options);
         this.listRoot = this.list.getRoot();
 
-        if (!options.features) {
-            return;
-        }
-
+        if (!options.features) return;
+        if (!this.root) this.root = this.listRoot;
         this.features = options.features;
         this.populate();
     };
 
-    /**
-     * ### Controls.append
-     *
-     * Appends the widget to `this.bodyDiv`
-     *
-     * @see Controls.init
-     */
-    Controls.prototype.append = function() {
-        var that = this;
-        var idButton = 'submit_Controls';
-
-
+    Controls.prototype.append = function(root) {
+        this.root = root;
+        var toReturn = this.listRoot;
         this.list.parse();
-        this.bodyDiv.appendChild(this.listRoot);
+        root.appendChild(this.listRoot);
 
         if (this.options.submit) {
+            var idButton = 'submit_' + this.id;
             if (this.options.submit.id) {
                 idButton = this.options.submit.id;
-                this.option.submit = this.option.submit.name;
+                delete this.options.submit.id;
             }
-            this.submit = node.window.addButton(this.bodyDiv, idButton,
+            this.submit = node.window.addButton(root, idButton,
                     this.options.submit, this.options.attributes);
 
+            var that = this;
             this.submit.onclick = function() {
                 if (that.options.change) {
                     node.emit(that.options.change);
                 }
             };
         }
+
+        return toReturn;
     };
 
     Controls.prototype.parse = function() {
         return this.list.parse();
     };
 
-    /**
-     * ### Controls.populate
-     *
-     * Adds features to the list.
-     *
-     * @see Controls.init
-     */
     Controls.prototype.populate = function() {
-        var key, id, attributes, container, elem;
-        var that = this;
+        var key, id, attributes, container, elem, that;
+        that = this;
 
         for (key in this.features) {
             if (this.features.hasOwnProperty(key)) {
@@ -27962,7 +27614,7 @@ if (!JSON) {
     Controls.prototype.listeners = function() {
         var that = this;
         // TODO: should this be inherited?
-        node.on(this.changeEvent, function() {
+        node.on(this.changeEvent, function(){
             that.hasChanged = true;
         });
 
@@ -28003,28 +27655,22 @@ if (!JSON) {
         return node.window.highlight(this.listRoot, code);
     };
 
-    // ## Sub-classes
+    // Sub-classes
 
-    /**
-     * ### Slider
-     */
-    node.widgets.register('SliderControls', SliderControls);
+    // Slider
 
     SliderControls.prototype.__proto__ = Controls.prototype;
     SliderControls.prototype.constructor = SliderControls;
 
-    SliderControls.version = '0.2.1';
-    SliderControls.description = 'Collection of Sliders.';
-
-    SliderControls.title = 'Slider Controls';
-    SliderControls.className = 'slidercontrols';
+    SliderControls.id = 'slidercontrols';
+    SliderControls.version = '0.2';
 
     SliderControls.dependencies = {
         Controls: {}
     };
 
 
-    function SliderControls(options) {
+    function SliderControls (options) {
         Controls.call(this, options);
     }
 
@@ -28036,26 +27682,21 @@ if (!JSON) {
         return node.window.getSlider(id, attributes);
     };
 
-    /**
-     * ### jQuerySlider
-     */
-     node.widgets.register('jQuerySliderControls', jQuerySliderControls);
+    // jQuerySlider
 
     jQuerySliderControls.prototype.__proto__ = Controls.prototype;
     jQuerySliderControls.prototype.constructor = jQuerySliderControls;
 
-    jQuerySliderControls.version = '0.14';
-    jQuerySliderControls.description = 'Collection of jQuery Sliders.';
-
-    jQuerySliderControls.title = 'jQuery Slider Controls';
-    jQuerySliderControls.className = 'jqueryslidercontrols';
+    jQuerySliderControls.id = 'jqueryslidercontrols';
+    jQuerySliderControls.version = '0.13';
 
     jQuerySliderControls.dependencies = {
         jQuery: {},
         Controls: {}
     };
 
-    function jQuerySliderControls(options) {
+
+    function jQuerySliderControls (options) {
         Controls.call(this, options);
     }
 
@@ -28076,33 +27717,30 @@ if (!JSON) {
         return slider;
     };
 
-    /**
-     * ### RadioControls
-     */
 
-    node.widgets.register('RadioControls', RadioControls);
+    ///////////////////////////
+
+
+    // Radio
 
     RadioControls.prototype.__proto__ = Controls.prototype;
     RadioControls.prototype.constructor = RadioControls;
 
-    RadioControls.version = '0.1.2';
-    RadioControls.description = 'Collection of Radio Controls.';
-
-    RadioControls.title = 'Radio Controls';
-    RadioControls.className = 'radiocontrols';
+    RadioControls.id = 'radiocontrols';
+    RadioControls.version = '0.1.1';
 
     RadioControls.dependencies = {
         Controls: {}
     };
 
-    function RadioControls(options) {
+    function RadioControls (options) {
         Controls.call(this,options);
         this.groupName = ('undefined' !== typeof options.name) ? options.name :
             node.window.generateUniqueId();
         this.radioElem = null;
     }
 
-    // overriding populate also. There is an error with the Label
+    // overriding populare also. There is an error with the Label
     RadioControls.prototype.populate = function() {
         var key, id, attributes, container, elem, that;
         that = this;
@@ -28110,8 +27748,8 @@ if (!JSON) {
         if (!this.radioElem) {
             this.radioElem = document.createElement('radio');
             this.radioElem.group = this.name || "radioGroup";
-            this.radioElem.group = this.className || "radioGroup";
-            this.bodyDiv.appendChild(this.radioElem);
+            this.radioElem.group = this.id || "radioGroup";
+            root.appendChild(this.radioElem);
         }
 
         for (key in this.features) {
@@ -28409,45 +28047,38 @@ if (!JSON) {
 
     node.widgets.register('DataBar', DataBar);
 
-    // ## Meta-data
+    // ## Defaults
+    DataBar.defaults = {};
+    DataBar.defaults.id = 'databar';
+    DataBar.defaults.fieldset = {
+        legend: 'Send DATA to players'
+    };
 
-    DataBar.version = '0.4.1';
+    // ## Meta-data
+    DataBar.version = '0.4';
     DataBar.description =
         'Adds a input field to send DATA messages to the players';
 
-    DataBar.title = 'DataBar';
-    DataBar.className = 'databar';
-
-
-    /**
-     * ## DataBar constructor
-     *
-     * Instantiates a new DataBar object
-     */
-    function DataBar() {
+    function DataBar(options) {
         this.bar = null;
+        this.root = null;
         this.recipient = null;
     }
 
-    // ## DataBar methods
-
-     /**
-     * ## DataBar.append
-     *
-     * Appends widget to `this.bodyDiv`
-     */
-    DataBar.prototype.append = function() {
+    DataBar.prototype.append = function(root) {
 
         var sendButton, textInput, dataInput;
-        var that = this;
 
-        sendButton = W.addButton(this.bodyDiv);
-        textInput = W.addTextInput(this.bodyDiv, 'data-bar-text');
-        W.addLabel(this.bodyDiv, textInput, undefined, 'Text');
+        sendButton = W.addButton(root);
+        //W.writeln('Text');
+        textInput = W.addTextInput(root, 'data-bar-text');
+        W.addLabel(root, textInput, undefined, 'Text');
         W.writeln('Data');
-        dataInput = W.addTextInput(this.bodyDiv, 'data-bar-data');
+        dataInput = W.addTextInput(root, 'data-bar-data');
 
-        this.recipient = W.addRecipientSelector(this.bodyDiv);
+        this.recipient = W.addRecipientSelector(root);
+
+        var that = this;
 
         sendButton.onclick = function() {
             var to, data, text;
@@ -28464,6 +28095,9 @@ if (!JSON) {
         node.on('UPDATED_PLIST', function() {
             node.window.populateRecipientSelector(that.recipient, node.game.pl);
         });
+
+        return root;
+
     };
 
 })(node);
@@ -28622,6 +28256,114 @@ if (!JSON) {
 })(node);
 
 /**
+ * # EventButton
+ * Copyright(c) 2014 Stefano Balietti
+ * MIT Licensed
+ *
+ * Creates a clickable button that fires an event
+ *
+ * www.nodegame.org
+ */
+(function(node) {
+
+    "use strict";
+
+    var JSUS = node.JSUS;
+
+    node.widgets.register('EventButton', EventButton);
+
+    // ## Defaults
+
+    EventButton.defaults = {};
+    EventButton.defaults.id = 'eventbutton';
+    EventButton.defaults.fieldset = false;
+
+    // ## Meta-data
+
+    EventButton.version = '0.2';
+
+    // ## Dependencies
+
+    EventButton.dependencies = {
+        JSUS: {}
+    };
+
+    function EventButton(options) {
+        this.options = options;
+        this.id = options.id;
+
+        this.root = null;
+        this.text = 'Send';
+        this.button = document.createElement('button');
+        this.callback = null;
+        this.init(this.options);
+    }
+
+    EventButton.prototype.init = function(options) {
+        options = options || this.options;
+        this.button.id = options.id || this.id;
+        var text = options.text || this.text;
+        while (this.button.hasChildNodes()) {
+            this.button.removeChild(this.button.firstChild);
+        }
+        this.button.appendChild(document.createTextNode(text));
+        this.event = options.event || this.event;
+        this.callback = options.callback || this.callback;
+        var that = this;
+        if (this.event) {
+            // Emit Event only if callback is successful
+            this.button.onclick = function() {
+                var ok = true;
+                if (this.callback){
+                    ok = options.callback.call(node.game);
+                }
+                if (ok) node.emit(that.event);
+            };
+        }
+
+        //// Emit DONE only if callback is successful
+        //this.button.onclick = function() {
+        //        var ok = true;
+        //        if (options.exec) ok = options.exec.call(node.game);
+        //        if (ok) node.emit(that.event);
+        //}
+    };
+
+    EventButton.prototype.append = function(root) {
+        this.root = root;
+        root.appendChild(this.button);
+        return root;
+    };
+
+    EventButton.prototype.listeners = function() {};
+
+    // # DoneButton
+
+    node.widgets.register('DoneButton', DoneButton);
+
+    DoneButton.prototype.__proto__ = EventButton.prototype;
+    DoneButton.prototype.constructor = DoneButton;
+
+    // ## Meta-data
+
+    DoneButton.id = 'donebutton';
+    DoneButton.version = '0.1';
+
+    // ## Dependencies
+
+    DoneButton.dependencies = {
+        EventButton: {}
+    };
+
+    function DoneButton (options) {
+        options.event = 'DONE';
+        options.text = options.text || 'Done!';
+        EventButton.call(this, options);
+    }
+
+})(node);
+
+/**
  * # Feedback
  * Copyright(c) 2014 Stefano Balietti
  * MIT Licensed
@@ -28636,17 +28378,18 @@ if (!JSON) {
 
     var J = node.JSUS;
 
-    node.widgets.register('Feedback', Feedback);
+    // ## Defaults
 
+    Feedback.defaults = {};
+    Feedback.defaults.id = 'feedback';
+    Feedback.defaults.fieldset = {
+        legend: 'Feedback'
+    };
 
     // ## Meta-data
 
-    Feedback.version = '0.2';
-    Feedback.description = 'Displays a simple feedback form.';
-
-    Feedback.title = 'Feedback';
-    Feedback.className = 'feedback';
-
+    Feedback.version = '0.1';
+    Feedback.description = 'Displays a simple feedback form';
 
     // ## Dependencies
 
@@ -28654,37 +28397,17 @@ if (!JSON) {
         JSUS: {}
     };
 
-    /**
-     * ## Feedback constructor
-     *
-     * `Feedback` sends a feedback message to the server
-     */
-    function Feedback() {
-        /**
-         * ### Feedback.textarea
-         *
-         * The TEXTAREA wherein clients can enter feedback
-         */
+    function Feedback(options) {
+        this.id = options.id || Feedback.id;
+        this.root = null;
         this.textarea = null;
-
-        /**
-         * ### Feedback.submit
-         *
-         * Button to submit the feedback form
-         */
         this.submit = null;
+        this.label = options.label || 'FEEDBACK';
     }
 
-    // ## Feedback methods
-
-    /**
-     * ### Feedback.append
-     *
-     * Appends widget to this.bodyDiv
-     */
-    Feedback.prototype.append = function() {
+    Feedback.prototype.append = function(root) {
         var that = this;
-
+        this.root = root;
         this.textarea = document.createElement('textarea');
         this.submit = document.createElement('button');
         this.submit.appendChild(document.createTextNode('Submit'));
@@ -28712,14 +28435,21 @@ if (!JSON) {
                 alert('An error has occurred, feedback not sent.');
             }
         };
-        this.bodyDiv.appendChild(this.textarea);
-        this.bodyDiv.appendChild(this.submit);
+        root.appendChild(this.textarea);
+        root.appendChild(this.submit);
+        return root;
     };
 
+    Feedback.prototype.getRoot = function() {
+        return this.root;
+    };
 
     Feedback.prototype.listeners = function() {
         var that = this;
     };
+
+    node.widgets.register('Feedback', Feedback);
+
 })(node);
 
 /**
@@ -28735,54 +28465,43 @@ if (!JSON) {
 
     "use strict";
 
+    node.widgets.register('GameBoard', GameBoard);
+
     var PlayerList = node.PlayerList;
 
-    node.widgets.register('GameBoard', GameBoard);
+    // ## Defaults
+
+    GameBoard.defaults = {};
+    GameBoard.defaults.id = 'gboard';
+    GameBoard.defaults.fieldset = {
+        legend: 'Game Board'
+    };
 
     // ## Meta-data
 
-    GameBoard.version = '0.4.1';
+    GameBoard.version = '0.4.0';
     GameBoard.description = 'Offer a visual representation of the state of ' +
                             'all players in the game.';
 
-    GameBoard.title = 'Game Board';
-    GameBoard.className = 'gameboard';
-
-    /**
-     * ## GameBoard constructor
-     *
-     * `GameBoard` shows the currently connected players
-     */
     function GameBoard(options) {
-        /**
-         * ### GameBoard.board
-         *
-         * The DIV wherein to display the players
-         */
-        this.board = null;
 
-        /**
-         * ### GameBoard.status
-         *
-         * The DIV wherein to display the status of the game board
-         */
+        this.id = options.id || GameBoard.defaults.id;
+        this.status_id = this.id + '_statusbar';
+
+        this.board = null;
         this.status = null;
+        this.root = null;
+
     }
 
-    // ## GameBoard methods
-
-    /**
-     * ### GameBoard.append
-     *
-     * Appends widget to `this.bodyDiv` and updates the board
-     *
-     * @see GameBoard.updateBoard
-     */
-    GameBoard.prototype.append = function() {
-        this.status = node.window.addDiv(this.bodyDiv, 'gboard_status');
-        this.board = node.window.addDiv(this.bodyDiv, 'gboard');
+    GameBoard.prototype.append = function(root) {
+        this.root = root;
+        this.status = node.window.addDiv(root, this.status_id);
+        this.board = node.window.addDiv(root, this.id);
 
         this.updateBoard(node.game.pl);
+
+        return root;
     };
 
     GameBoard.prototype.listeners = function() {
@@ -28790,51 +28509,10 @@ if (!JSON) {
         node.on('UPDATED_PLIST', function() {
             that.updateBoard(node.game.pl);
         });
+
     };
 
-    /**
-     * ### GameBoard.updateBoard
-     *
-     * Updates the information on the game board
-     *
-     * @see printLine
-     */
-    GameBoard.prototype.updateBoard = function(pl) {
-        var player, separator;
-        var that = this;
-
-        this.status.innerHTML = 'Updating...';
-
-        if (pl.size()) {
-            that.board.innerHTML = '';
-            pl.forEach( function(p) {
-                player = printLine(p);
-
-                W.write(player, that.board);
-
-                separator = printSeparator();
-                W.write(separator, that.board);
-            });
-        }
-        this.status.innerHTML = 'Connected players: ' + node.game.pl.length;
-    };
-
-    // ## Helper methods
-
-     /**
-     * ### printLine
-     *
-     * Returns a `String` describing the player passed in
-     *
-     * @param {Player} `p`. Player object which will be passed in by a call to
-     * `node.game.pl.forEach`.
-     *
-     * @return {String} A string describing the `Player` `p`.
-     *
-     * @see GameBoard.updateBoard
-     * @see nodegame-client/Player
-     */
-    function printLine(p) {
+    GameBoard.prototype.printLine = function(p) {
 
         var line, levels, level;
         levels = node.constants.stageLevels;
@@ -28879,11 +28557,34 @@ if (!JSON) {
         }
 
         return line + '(' + level + ')';
-    }
+    };
 
-    function printSeparator() {
+    GameBoard.prototype.printSeparator = function(p) {
         return W.getElement('hr', null, {style: 'color: #CCC;'});
-    }
+    };
+
+
+    GameBoard.prototype.updateBoard = function(pl) {
+        var player, separator;
+        var that = this;
+
+        this.status.innerHTML = 'Updating...';
+
+        if (pl.size()) {
+            that.board.innerHTML = '';
+            pl.forEach( function(p) {
+                player = that.printLine(p);
+
+                W.write(player, that.board);
+
+                separator = that.printSeparator(p);
+                W.write(separator, that.board);
+            });
+        }
+
+
+        this.status.innerHTML = 'Connected players: ' + node.game.pl.length;
+    };
 
 })(node);
 
@@ -28902,49 +28603,29 @@ if (!JSON) {
 
     node.widgets.register('GameSummary', GameSummary);
 
+    // ## Defaults
+
+    GameSummary.defaults = {};
+    GameSummary.defaults.id = 'gamesummary';
+    GameSummary.defaults.fieldset = { legend: 'Game Summary' };
+
     // ## Meta-data
 
-    GameSummary.version = '0.3.1';
+    GameSummary.version = '0.3';
     GameSummary.description =
         'Show the general configuration options of the game.';
 
-    GameSummary.title = 'Game Summary';
-    GameSummary.className = 'gamesummary';
-
-
-    /**
-     * ## GameSummary constructor
-     *
-     * `GameSummary` shows the configuration options of the game in a box
-     */
-    function GameSummary() {
-        /**
-         * ### GameSummary.summaryDiv
-         *
-         * The DIV in which to display the information
-         */
+    function GameSummary(options) {
         this.summaryDiv = null;
     }
 
-    // ## GameSummary methods
-
-    /**
-     * ### GameSummary.append
-     *
-     * Appends the widget to `this.bodyDiv` and calls `this.writeSummary`
-     *
-     * @see GameSummary.writeSummary
-     */
-    GameSummary.prototype.append = function() {
-        this.summaryDiv = node.window.addDiv(this.bodyDiv);
+    GameSummary.prototype.append = function(root) {
+        this.root = root;
+        this.summaryDiv = node.window.addDiv(root);
         this.writeSummary();
+        return root;
     };
 
-    /**
-     * ### GameSummary.writeSummary
-     *
-     * Writes a summary of the game configuration into `this.summaryDiv`
-     */
     GameSummary.prototype.writeSummary = function(idState, idSummary) {
         var gName = document.createTextNode('Name: ' + node.game.metadata.name),
         gDescr = document.createTextNode(
@@ -28960,7 +28641,7 @@ if (!JSON) {
         this.summaryDiv.appendChild(document.createElement('br'));
         this.summaryDiv.appendChild(gMaxP);
 
-        node.window.addDiv(this.bodyDiv, this.summaryDiv, idSummary);
+        node.window.addDiv(this.root, this.summaryDiv, idSummary);
     };
 
 })(node);
@@ -29140,10 +28821,10 @@ if (!JSON) {
 
     "use strict";
 
+    node.widgets.register('LanguageSelector', LanguageSelector);
+
     var J = node.JSUS,
         game = node.game;
-
-    node.widgets.register('LanguageSelector', LanguageSelector);
 
     // ## Meta-data
 
@@ -29491,17 +29172,22 @@ if (!JSON) {
 
     "use strict";
 
-    var J = node.JSUS;
-
     node.widgets.register('MoneyTalks', MoneyTalks);
+
+    var JSUS = node.JSUS;
+
+    // ## Defaults
+
+    MoneyTalks.defaults = {};
+    MoneyTalks.defaults.id = 'moneytalks';
+    MoneyTalks.defaults.fieldset = {
+        legend: 'Earnings'
+    };
 
     // ## Meta-data
 
-    MoneyTalks.version = '0.1.1';
-    MoneyTalks.description = 'Displays the earnings of a player.';
-
-    MoneyTalks.title = 'Earnings';
-    MoneyTalks.className = 'moneytalks';
+    MoneyTalks.version = '0.1.0';
+    MoneyTalks.description = 'Display the earnings of a player.';
 
     // ## Dependencies
 
@@ -29509,88 +29195,44 @@ if (!JSON) {
         JSUS: {}
     };
 
-    /**
-     * ## MoneyTalks constructor
-     *
-     * `MoneyTalks` displays the earnings of the player so far
-     *
-     * @param {object} options Optional. Configuration options
-     * which is forwarded to MoneyTalks.init.
-     *
-     * @see MoneyTalks.init
-     */
     function MoneyTalks(options) {
-        /**
-         * ### MoneyTalks.spanCurrency
-         *
-         * The SPAN which holds information on the currency
-         */
-        this.spanCurrency = document.createElement('span');
+        this.id = options.id || MoneyTalks.defaults.id;
 
-        /**
-         * ### MoneyTalks.spanMoney
-         *
-         * The SPAN which holds information about the money earned so far
-         */
+        this.root = null;               // the parent element
+
+        this.spanCurrency = document.createElement('span');
         this.spanMoney = document.createElement('span');
 
-        /**
-         * ### MoneyTalks.currency
-         *
-         * String describing the currency
-         */
         this.currency = 'EUR';
-
-        /**
-         * ### MoneyTalks.money
-         *
-         * Currently earned money
-         */
         this.money = 0;
-
-        /**
-         * ### MoneyTalks.precicison
-         *
-         * Precision of floating point number to display
-         */
         this.precision = 2;
-
         this.init(options);
     }
 
-    // ## MoneyTalks methods
 
-    /**
-     * ### MoneyTalks.init
-     *
-     * Initializes the widget
-     *
-     * @param {object} options Optional. Configuration options.
-     *
-     * The  options object can have the following attributes:
-     *   - `currency`: String describing currency to use.
-     *   - `money`: Current amount of money earned.
-     *   - `precision`: Precision of floating point output to use.
-     *   - `currencyClassName`: Class name to be set for this.spanCurrency.
-     *   - `moneyClassName`: Class name to be set for this.spanMoney;
-     */
     MoneyTalks.prototype.init = function(options) {
         this.currency = options.currency || this.currency;
         this.money = options.money || this.money;
         this.precision = options.precision || this.precision;
 
-        this.spanCurrency.className = options.currencyClassName ||
-            this.spanCurrency.className || 'moneytalkscurrency';
-        this.spanMoney.className = options.moneyClassName ||
-            this.spanMoney.className || 'moneytalksmoney';
+        this.spanCurrency.id = options.idCurrency || this.spanCurrency.id ||
+            'moneytalks_currency';
+        this.spanMoney.id = options.idMoney || this.spanMoney.id ||
+            'moneytalks_money';
 
         this.spanCurrency.innerHTML = this.currency;
         this.spanMoney.innerHTML = this.money;
     };
 
-    MoneyTalks.prototype.append = function() {
-        this.bodyDiv.appendChild(this.spanMoney);
-        this.bodyDiv.appendChild(this.spanCurrency);
+    MoneyTalks.prototype.getRoot = function() {
+        return this.root;
+    };
+
+    MoneyTalks.prototype.append = function(root, ids) {
+        var PREF = this.id + '_';
+        root.appendChild(this.spanMoney);
+        root.appendChild(this.spanCurrency);
+        return root;
     };
 
     MoneyTalks.prototype.listeners = function() {
@@ -29600,11 +29242,6 @@ if (!JSON) {
         });
     };
 
-    /**
-     * ### MoneyTalks.update
-     *
-     * Updates the contents of this.money and this.spanMoney according to amount
-     */
     MoneyTalks.prototype.update = function(amount) {
         if ('number' !== typeof amount) {
             // Try to parse strings
@@ -29616,6 +29253,7 @@ if (!JSON) {
         this.money += amount;
         this.spanMoney.innerHTML = this.money.toFixed(this.precision);
     };
+
 })(node);
 
 /**
@@ -30092,16 +29730,19 @@ if (!JSON) {
 
     var J = node.JSUS;
 
-    node.widgets.register('Requirements', Requirements);
+    // ## Defaults
+
+    Requirements.defaults = {};
+    Requirements.defaults.id = 'requirements';
+    Requirements.defaults.fieldset = {
+        legend: 'Requirements'
+    };
 
     // ## Meta-data
 
-    Requirements.version = '0.5.1';
+    Requirements.version = '0.5.0';
     Requirements.description = 'Checks a set of requirements and display the ' +
         'results';
-
-    Requirements.title = 'Requirements';
-    Requirements.className = 'requirements';
 
     // ## Dependencies
 
@@ -30118,132 +29759,44 @@ if (!JSON) {
      * @param {object} options
      */
     function Requirements(options) {
-        /**
-         * ### Requirements.callbacks
-         *
-         * Array of all test callbacks
-         */
+        // The id of the widget.
+        this.id = options.id || Requirements.id;
+        // Array of all test callbacks.
         this.callbacks = [];
-
-        /**
-         * ### Requirements.stillChecking
-         *
-         * Number of tests still pending
-         */
+        // Number of tests still pending.
         this.stillChecking = 0;
-
-        /**
-         * ### Requirements.withTimeout
-         *
-         * If TRUE, a maximum timeout to the execution of ALL tests is set
-         */
+        // If TRUE, a maximum timeout to the execution of ALL tests is set.
         this.withTimeout = options.withTimeout || true;
-
-        /**
-         * ### Requirements.timeoutTime
-         *
-         * The time in milliseconds for the timeout to expire
-         */
+        // The time in milliseconds for the timeout to expire.
         this.timeoutTime = options.timeoutTime || 10000;
-
-        /**
-         * ### Requirements.timeoutId
-         *
-         * The id of the timeout, if created
-         */
+        // The id of the timeout, if created.
         this.timeoutId = null;
 
-        /**
-         * ### Requirements.summary
-         *
-         * Span summarizing the status of the tests
-         */
+        // Span summarizing the status of the tests.
         this.summary = null;
-
-        /**
-         * ### Requirements.summaryUpdate
-         *
-         * Span counting how many tests have been completed
-         */
+        // Span counting how many tests have been completed.
         this.summaryUpdate = null;
-
-        /**
-         * ### Requirements.dots
-         *
-         * Looping dots to give the user the feeling of code execution
-         */
+        // Looping dots to give the user the feeling of code execution.
         this.dots = null;
 
-        /**
-         * ### Requirements.hasFailed
-         *
-         * TRUE if at least one test has failed
-         */
+        // TRUE if at least one test has failed.
         this.hasFailed = false;
 
-        /**
-         * ### Requirements.results
-         *
-         * The outcomes of all tests
-         */
+        // The outcomes of all tests.
         this.results = [];
 
-        /**
-         * ### Requirements.sayResult
-         *
-         * If true, the final result of the tests will be sent to the server
-         */
+        // If true, the final result of the tests will be sent to the server.
         this.sayResults = options.sayResults || false;
-
-        /**
-         * ### Requirements.sayResultLabel
-         *
-         * The label of the SAY message that will be sent to the server
-         */
+        // The label of the SAY message that will be sent to the server.
         this.sayResultsLabel = options.sayResultLabel || 'requirements';
-
-        /**
-         * ### Requirements.addToResults
-         *
-         *  Callback to add properties to result object sent to server
-         */
+        // Callback to add properties to the result object to send to the
+        // server.
         this.addToResults = options.addToResults || null;
 
-        /**
-         * ### Requirements.onComplete
-         *
-         * Callback to be executed at the end of all tests
-         */
+        // Callbacks to be executed at the end of all tests.
         this.onComplete = null;
-
-        /**
-         * ### Requirements.onSuccess
-         *
-         * Callback to be executed at the end of all tests
-         */
         this.onSuccess = null;
-
-        /**
-         * ### Requirements.onFail
-         *
-         * Callback to be executed at the end of all tests
-         */
         this.onFail = null;
-
-        /**
-         * ### Requirements.list
-         *
-         * `List` to render the results
-         *
-         * @see nodegame-server/List
-         */
-        // TODO: simplify render syntax.
-        this.list = new W.List({
-            render: {
-                pipeline: renderResult,
-                returnAt: 'first'
-            }
-        });
 
         function renderResult(o) {
             var imgPath, img, span, text;
@@ -30265,6 +29818,14 @@ if (!JSON) {
             span.appendChild(text);
             return span;
         }
+
+        // TODO: simplify render syntax.
+        this.list = new W.List({
+            render: {
+                pipeline: renderResult,
+                returnAt: 'first'
+            }
+        });
     }
 
     // ## Requirements methods
@@ -30713,6 +30274,8 @@ if (!JSON) {
         return errMsg;
     }
 
+    node.widgets.register('Requirements', Requirements);
+
 })(node);
 
 /**
@@ -30730,58 +30293,36 @@ if (!JSON) {
 
     node.widgets.register('ServerInfoDisplay', ServerInfoDisplay);
 
+    // ## Defaults
+
+    ServerInfoDisplay.defaults = {};
+    ServerInfoDisplay.defaults.id = 'serverinfodisplay';
+    ServerInfoDisplay.defaults.fieldset = {
+        legend: 'Server Info',
+        id: 'serverinfo_fieldset'
+    };
+
     // ## Meta-data
 
-    ServerInfoDisplay.version = '0.4.1';
-    ServerInfoDisplay.description = 'Displays information about the server.'
+    ServerInfoDisplay.version = '0.4';
 
-    ServerInfoDisplay.title = 'Server Info';
-    ServerInfoDisplay.className = 'serverinfodisplay';
+    function ServerInfoDisplay(options) {
+        this.id = options.id;
 
-    /**
-     * ## ServerInfoDisplay constructor
-     *
-     * `ServerInfoDisplay` shows information about the server
-     */
-    function ServerInfoDisplay() {
-        /**
-         * ### ServerInfoDisplay.div
-         *
-         * The DIV wherein to display the information
-         */
+        this.root = null;
         this.div = document.createElement('div');
-
-        /**
-         * ### ServerInfoDisplay.table
-         *
-         * The table holding the information
-         */
         this.table = null; //new node.window.Table();
-
-        /**
-         * ### ServerInfoDisplay.button
-         *
-         * The button TODO
-         */
         this.button = null;
-
     }
 
-    // ## ServerInfoDisplay methods
-
-    /**
-     * ### ServerInfoDisplay.init
-     *
-     * Initializes the widget
-     */
-    ServerInfoDisplay.prototype.init = function() {
+    ServerInfoDisplay.prototype.init = function(options) {
         var that = this;
         if (!this.div) {
             this.div = document.createElement('div');
         }
         this.div.innerHTML = 'Waiting for the reply from Server...';
         if (!this.table) {
-            this.table = new node.window.Table();
+            this.table = new node.window.Table(options);
         }
         this.table.clear(true);
         this.button = document.createElement('button');
@@ -30790,21 +30331,16 @@ if (!JSON) {
         this.button.onclick = function(){
             that.getInfo();
         };
-        this.bodyDiv.appendChild(this.button);
+        this.root.appendChild(this.button);
         this.getInfo();
     };
 
-    ServerInfoDisplay.prototype.append = function() {
-        this.bodyDiv.appendChild(this.div);
+    ServerInfoDisplay.prototype.append = function(root) {
+        this.root = root;
+        root.appendChild(this.div);
+        return root;
     };
 
-    /**
-     * ### ServerInfoDisplay.getInfo
-     *
-     * Updates current info
-     *
-     * @see ServerInfoDisplay.processInfo
-     */
     ServerInfoDisplay.prototype.getInfo = function() {
         var that = this;
         node.get('INFO', function(info) {
@@ -30813,11 +30349,6 @@ if (!JSON) {
         });
     };
 
-    /**
-     * ### ServerInfoDisplay.processInfo
-     *
-     * Processes incoming server info and displays it in `this.table`
-     */
     ServerInfoDisplay.prototype.processInfo = function(info) {
         this.table.clear(true);
         for (var key in info) {
@@ -30861,27 +30392,17 @@ if (!JSON) {
     StateBar.title = 'Change GameStage';
     StateBar.className = 'statebar';
 
-
-    /**
-     * ## StateBar constructor
-     *
-     * `StateBar` provides a simple interface to change game stages
-     */
-    function StateBar() {
-        //this.recipient = null;
+    function StateBar(options) {
+        this.id = options.id || StateBar.className;
+        this.recipient = null;
     }
 
-    /**
-     * ### StateBar.append
-     *
-     * Appends widget to `this.bodyDiv`
-     */
     StateBar.prototype.append = function() {
-        var prefix, that = this;
+        var prefix, that;
         var idButton, idStageField, idRecipientField;
         var sendButton, stageField, recipientField;
 
-        prefix = StateBar.className + '_';
+        prefix = this.id + '_';
 
         idButton = prefix + 'sendButton';
         idStageField = prefix + 'stageField';
@@ -30896,6 +30417,8 @@ if (!JSON) {
         this.bodyDiv.appendChild(recipientField);
 
         sendButton = node.window.addButton(this.bodyDiv, idButton);
+
+        that = this;
 
         //node.on('UPDATED_PLIST', function() {
         //    node.window.populateRecipientSelector(
@@ -30954,32 +30477,11 @@ if (!JSON) {
         Table: {}
     };
 
-
-    /**
-     * ## StateDisplay constructor
-     *
-     * `StateDisplay` displays information about the state of a player
-     */
-    function StateDisplay() {
-        /**
-         * ### StateDisplay.table
-         *
-         * The `Table` which holds the information
-         *
-         * @See nodegame-window/Table
-         */
+    function StateDisplay(options) {
+        this.id = options.id;
         this.table = new Table();
     }
 
-    // ## StateDisplay methods
-
-    /**
-     * ### StateDisplay.append
-     *
-     * Appends widget to `this.bodyDiv` and calls `this.updateAll`
-     *
-     * @see StateDisplay.updateAll
-     */
     StateDisplay.prototype.append = function() {
         var that, checkPlayerName;
         that = this;
@@ -30992,11 +30494,6 @@ if (!JSON) {
         this.bodyDiv.appendChild(this.table.table);
     };
 
-    /**
-     * ### StateDisplay.updateAll
-     *
-     * Updates information in `this.table`
-     */
     StateDisplay.prototype.updateAll = function() {
         var stage, stageNo, stageId, playerId, tmp, miss;
         miss = '-';
@@ -31052,9 +30549,9 @@ if (!JSON) {
 
     "use strict";
 
-    var J = node.JSUS;
-
     node.widgets.register('VisualRound', VisualRound);
+
+    var J = node.JSUS;
 
     // ## Meta-data
 
@@ -31269,7 +30766,7 @@ if (!JSON) {
      * - `COUNT_UP_STAGES_TO_TOTAL`: Display current and total stage number.
      * - `COUNT_UP_ROUNDS_TO_TOTAL`: Display current and total round number.
      * - `COUNT_DOWN_STAGES`: Display number of stages left to play.
-     * - `COUNT_DOWN_ROUNDS`: Display number of rounds left in this stage.
+     * - `COUNT_DOWN_ROUNDS: Display number of rounds left in this stage.
      *
      * @param {array} displayModeNames Array of strings representing the names
      *
@@ -32159,11 +31656,11 @@ if (!JSON) {
 })(node);
 
 /**
- * # VisualStage
+ * # VisualState
  * Copyright(c) 2014 Stefano Balietti
  * MIT Licensed
  *
- * Shows current, previous and next stage.
+ * Shows current, previous and next state.
  *
  * www.nodegame.org
  */
@@ -32171,71 +31668,56 @@ if (!JSON) {
 
     "use strict";
 
-    var JSUS = node.JSUS;
-    var Table = node.window.Table;
+    node.widgets.register('VisualState', VisualState);
 
-    node.widgets.register('VisualStage', VisualStage);
+    var JSUS = node.JSUS,
+    Table = node.window.Table;
 
     // ## Meta-data
 
-    VisualStage.version = '0.2.2';
-    VisualStage.description =
-        'Visually display current, previous and next stage of the game.';
+    VisualState.version = '0.2.1';
+    VisualState.description =
+        'Visually display current, previous and next state of the game.';
 
-    VisualStage.title = 'Stage';
-    VisualStage.className = 'visualstage';
+    VisualState.title = 'State';
+    VisualState.className = 'visualstate';
 
     // ## Dependencies
 
-    VisualStage.dependencies = {
+    VisualState.dependencies = {
         JSUS: {},
         Table: {}
     };
 
-    /**
-     * ## VisualStage constructor
-     *
-     * `VisualStage` displays current, previous and next stage of the game
-     */
-    function VisualStage() {
+    function VisualState(options) {
+        this.id = options.id;
         this.table = new Table();
     }
 
-    // ## VisualStage methods
-
-    /**
-     * ### VisualStage.append
-     *
-     * Appends widget to `this.bodyDiv` and writes the stage
-     *
-     * @see VisualStage.writeStage
-     */
-    VisualStage.prototype.append = function() {
+    VisualState.prototype.append = function() {
+        var that = this;
+        var PREF = this.id + '_';
         this.bodyDiv.appendChild(this.table.table);
-        this.writeStage();
+        this.writeState();
     };
 
-    VisualStage.prototype.listeners = function() {
+    VisualState.prototype.listeners = function() {
         var that = this;
 
         node.on('STEP_CALLBACK_EXECUTED', function() {
-            that.writeStage();
+            that.writeState();
         });
+
         // Game over and init?
     };
 
-    /**
-     * ### VisualStage.writeStage
-     *
-     * Writes the current, previous and next stage into `this.table`
-     */
-    VisualStage.prototype.writeStage = function() {
-        var miss, stage, pr, nx, tmp;
+    VisualState.prototype.writeState = function() {
+        var miss, state, pr, nx, tmp;
         var curStep, nextStep, prevStep;
         var t;
 
         miss = '-';
-        stage = 'Uninitialized';
+        state = 'Uninitialized';
         pr = miss;
         nx = miss;
 
@@ -32243,7 +31725,7 @@ if (!JSON) {
 
         if (curStep) {
             tmp = node.game.plot.getStep(curStep);
-            stage = tmp ? tmp.id : miss;
+            state = tmp ? tmp.id : miss;
 
             prevStep = node.game.plot.previous(curStep);
             if (prevStep) {
@@ -32261,7 +31743,7 @@ if (!JSON) {
         this.table.clear(true);
 
         this.table.addRow(['Previous: ', pr]);
-        this.table.addRow(['Current: ', stage]);
+        this.table.addRow(['Current: ', state]);
         this.table.addRow(['Next: ', nx]);
 
         t = this.table.selexec('y', '=', 0);
@@ -32286,10 +31768,9 @@ if (!JSON) {
 
     "use strict";
 
-    var J = node.JSUS;
-
     node.widgets.register('VisualTimer', VisualTimer);
 
+    var J = node.JSUS;
 
     // ## Meta-data
 
@@ -32316,14 +31797,16 @@ if (!JSON) {
      * The options it can take are:
      *
      *   - any options that can be passed to a `GameTimer`
-     *   - `waitBoxOptions`: an option object to be passed to `TimerBox`
-     *   - `mainBoxOptions`: an option object to be passed to `TimerBox`
+     *   - waitBoxOptions: an option object to be passed to `TimerBox`
+     *   - mainBoxOptions: an option object to be passed to `TimerBox`
      *
      * @see TimerBox
      * @see GameTimer
      */
     function VisualTimer(options) {
         this.options = options || {};
+        this.options.update = ('undefined' === typeof this.options.update) ?
+            1000 : this.options.update;
 
         /**
          * ### VisualTimer.gameTimer
@@ -32370,7 +31853,6 @@ if (!JSON) {
          * Indicates whether the instance has been initializded already
          */
         this.isInitialized = false;
-
         this.init(this.options);
     }
 
@@ -32394,10 +31876,9 @@ if (!JSON) {
      */
     VisualTimer.prototype.init = function(options) {
         var t;
-        options = options || {};
-        if ('object' !== typeof options) {
-            throw new TypeError('VisualTimer.init: options must be ' +
-                                'object or undefined');
+
+        if (!options) {
+            options = {};
         }
         J.mixout(options, this.options);
 
@@ -32442,18 +31923,7 @@ if (!JSON) {
                 };
             }
         });
-
         this.options = options;
-
-        if ('undefined' === typeof this.options.update) {
-            this.options.update = 1000;
-        }
-        if ('undefined' === typeof this.options.stopOnDone) {
-            this.options.stopOnDone = true;
-        }
-        if ('undefined' === typeof this.options.startOnPlaying) {
-            this.options.startOnPlaying = true;
-        }
 
         if (!this.options.mainBoxOptions) {
             this.options.mainBoxOptions = {};
@@ -32498,26 +31968,33 @@ if (!JSON) {
     /**
      * ### VisualTimer.clear
      *
-     * Reverts state of `VisualTimer` to right after a constructor call
+     * Reverts state of `VisualTimer` to right after constructor call
      *
      * @param {object} options Configuration object
      *
-     * @return {object} oldOptions The Old options
+     * @return {object} Old options
      *
      * @see node.timer.destroyTimer
      * @see VisualTimer.init
      */
     VisualTimer.prototype.clear = function(options) {
-        var oldOptions;
-        options = options || {};
-        oldOptions = this.options;
+        var oldOptions = this.options;
+        if (!options) {
+            options = {};
+        }
 
         node.timer.destroyTimer(this.gameTimer);
 
+        // ----- as in constructor -----
+        this.options = options;
+        this.options.update = ('undefined' === typeof this.options.update) ?
+            1000 : this.options.update;
         this.gameTimer = null;
+
         this.activeBox = null;
         this.isInitialized = false;
-        this.init(options);
+        this.init(this.options);
+        // ----- as in constructor ----
 
         return oldOptions;
     };
@@ -32607,7 +32084,7 @@ if (!JSON) {
     /**
       * ### VisualTimer.startWaiting
       *
-      * Stops the timer and changes the appearance to a max. wait timer
+      * Changes the `VisualTimer` appearance to a max. wait timer
       *
       * If options and/or options.milliseconds are undefined, the wait timer
       * will start with the current time left on the `gameTimer`. The mainBox
@@ -32642,7 +32119,7 @@ if (!JSON) {
     /**
       * ### VisualTimer.startTiming
       *
-      * Starts the timer and changes appearance to a regular countdown
+      * Changes the `VisualTimer` appearance to a regular countdown
       *
       * The mainBox will be unstriked and set active, the waitBox will be
       * hidden. All other options are forwarded directly to
@@ -32715,22 +32192,18 @@ if (!JSON) {
 
         node.on('PLAYING', function() {
             var stepObj, timer, options;
-            if (that.options.startOnPlaying) {
-                stepObj = node.game.getCurrentStep();
-                if (!stepObj) return;
-                timer = stepObj.timer;
-                if (timer) {
-                    options = processOptions(timer, this.options);
-                    that.startTiming(options);
-                }
+            stepObj = node.game.getCurrentStep();
+            if (!stepObj) return;
+            timer = stepObj.timer;
+            if (timer) {
+                options = processOptions(timer, this.options);
+                that.startTiming(options);
             }
         });
 
         node.on('REALLY_DONE', function() {
-            if (that.options.stopOnDone) {
-                if (!that.gameTimer.isStopped()) {
-                    that.startWaiting();
-                }
+            if (!that.gameTimer.isStopped()) {
+                that.startWaiting();
             }
        });
     };
@@ -32983,18 +32456,21 @@ if (!JSON) {
 
     "use strict";
 
-    var J = node.JSUS;
-
     node.widgets.register('Wall', Wall);
+
+    var JSUS = node.JSUS;
+
+    // ## Defaults
+
+    Wall.defaults = {};
+    Wall.defaults.id = 'wall';
+    Wall.defaults.fieldset = { legend: 'Game Log' };
 
     // ## Meta-data
 
-    Wall.version = '0.3.1';
-    Wall.description = 'Intercepts all LOG events and prints them into a PRE ' +
+    Wall.version = '0.3';
+    Wall.description = 'Intercepts all LOG events and prints them into a DIV ' +
                        'element with an ordinal number and a timestamp.';
-
-    Wall.title = 'Wall';
-    Wall.className = 'wall';
 
     // ## Dependencies
 
@@ -33002,78 +32478,28 @@ if (!JSON) {
         JSUS: {}
     };
 
-    /**
-     * ## Wall constructor
-     *
-     * `Wall` prints all LOG events into a PRE.
-     *
-     * @param {object} options Optional. Configuration options
-     * The options it can take are:
-     *
-     *   - id: The id of the PRE in which to write.
-     *   - name: The name of this Wall.
-     */
     function Wall(options) {
-        /**
-         * ### Wall.id
-         *
-         * The id of the PRE in which to write
-         */
-        this.id = options.id || 'wall';
-
-        /**
-         * ### Wall.name
-         *
-         * The name of this Wall
-         */
+        this.id = options.id || Wall.id;
         this.name = options.name || this.name;
-
-        /**
-         * ### Wall.buffer
-         *
-         * Buffer for logs which are to be logged before the document is ready
-         */
         this.buffer = [];
-
-        /**
-         * ### Wall.counter
-         *
-         * Counts number of entries on wall
-         */
         this.counter = 0;
 
-        /**
-         * ### Wall.wall
-         *
-         * The PRE in which to write
-         */
         this.wall = node.window.getElement('pre', this.id);
     }
 
-    // ## Wall methods
-
-    /**
-     * ### Wall.init
-     *
-     * Initializes the instance.
-     *
-     * If options are provided, the counter is set to `options.counter`
-     * otherwise nothing happens.
-     */
     Wall.prototype.init = function(options) {
         options = options || {};
         this.counter = options.counter || this.counter;
     };
 
-    Wall.prototype.append = function() {
-        return this.bodyDiv.appendChild(this.wall);
+    Wall.prototype.append = function(root) {
+        return root.appendChild(this.wall);
     };
 
-    /**
-     * ### Wall.listeners
-     *
-     * Wall has a listener to the `LOG` event
-     */
+    Wall.prototype.getRoot = function() {
+        return this.wall;
+    };
+
     Wall.prototype.listeners = function() {
         var that = this;
         node.on('LOG', function(msg) {
@@ -33082,28 +32508,15 @@ if (!JSON) {
         });
     };
 
-
-    /**
-     *  ### Wall.write
-     *
-     * Writes argument as first entry of this.wall if document is fully loaded
-     *
-     * Writes into this.buffer if document is not ready yet.
-     */
     Wall.prototype.write = function(text) {
         if (document.readyState !== 'complete') {
             this.buffer.push(s);
         } else {
-            var mark = this.counter++ + ') ' + J.getTime() + ' ';
+            var mark = this.counter++ + ') ' + JSUS.getTime() + ' ';
             this.wall.innerHTML = mark + text + "\n" + this.wall.innerHTML;
         }
     };
 
-    /**
-     * ### Wall.debuffer
-     *
-     * If the document is ready, the buffer content is written into this.wall
-     */
     Wall.prototype.debuffer = function() {
         if (document.readyState === 'complete' && this.buffer.length > 0) {
             for (var i=0; i < this.buffer.length; i++) {
