@@ -355,16 +355,16 @@ if (!JSON) {
 }());
 
 /**
- * # Shelf.JS 
+ * # Shelf.JS
  * Copyright 2014 Stefano Balietti
  * GPL licenses.
  *
  * Persistent Client-Side Storage
- * 
+ *
  * ---
  */
 (function(exports){
-    
+
     var version = '0.5';
 
     var store = exports.store = function(key, value, options, type) {
@@ -375,7 +375,7 @@ if (!JSON) {
 	    return;
 	}
 	store.log('Accessing ' + type + ' storage');
-	
+
 	return store.types[type](key, value, options);
     };
 
@@ -390,8 +390,8 @@ if (!JSON) {
     var mainStorageType = "volatile";
 
     //if Object.defineProperty works...
-    try {	
-	
+    try {
+
 	Object.defineProperty(store, 'type', {
 	    set: function(type){
 		if ('undefined' === typeof store.types[type]) {
@@ -419,7 +419,7 @@ if (!JSON) {
 	    options.type = type;
 	    return store(key, value, options);
 	};
-	
+
 	if (!store.type || store.type === "volatile") {
 	    store.type = type;
 	}
@@ -427,8 +427,8 @@ if (!JSON) {
 
     // TODO: create unit test
     store.onquotaerror = undefined;
-    store.error = function() {	
-	console.log("shelf quota exceeded"); 
+    store.error = function() {
+	console.log("shelf quota exceeded");
 	if ('function' === typeof store.onquotaerror) {
 	    store.onquotaerror(null);
 	}
@@ -438,7 +438,7 @@ if (!JSON) {
 	if (store.verbosity > 0) {
 	    console.log('Shelf v.' + version + ': ' + text);
 	}
-	
+
     };
 
     store.isPersistent = function() {
@@ -448,7 +448,7 @@ if (!JSON) {
     };
 
     //if Object.defineProperty works...
-    try {	
+    try {
 	Object.defineProperty(store, 'persistent', {
 	    set: function(){},
 	    get: store.isPersistent,
@@ -466,7 +466,7 @@ if (!JSON) {
 	}
 	return o;
     };
-    
+
     store.retrocycle = function(o) {
 	if (JSON && JSON.retrocycle && 'function' === typeof JSON.retrocycle) {
 	    o = JSON.retrocycle(o);
@@ -478,7 +478,7 @@ if (!JSON) {
 	if (!JSON || !JSON.stringify || 'function' !== typeof JSON.stringify) {
 	    throw new Error('JSON.stringify not found. Received non-string value and could not serialize.');
 	}
-	
+
 	o = store.decycle(o);
 	return JSON.stringify(o);
     };
@@ -494,7 +494,7 @@ if (!JSON) {
 		store.log(o);
 	    }
 	}
-	
+
 	o = store.retrocycle(o);
 	return o;
     };
@@ -502,16 +502,16 @@ if (!JSON) {
     // ## In-memory storage
     // ### fallback for all browsers to enable the API even if we can't persist data
     (function() {
-	
+
 	var memory = {},
 	timeout = {};
-	
+
 	function copy(obj) {
 	    return store.parse(store.stringify(obj));
 	}
 
 	store.addType("volatile", function(key, value, options) {
-	    
+
 	    if (!key) {
 		return copy(memory);
 	    }
@@ -545,11 +545,11 @@ if (!JSON) {
 }('undefined' !== typeof module && 'undefined' !== typeof module.exports ? module.exports: this));
 /**
  * ## Amplify storage for Shelf.js
- * 
+ *
  * v. 1.1.0 22.05.2013 a275f32ee7603fbae6607c4e4f37c4d6ada6c3d5
- * 
- * Important! When updating to next Amplify.JS release, remember to change: 
- * 
+ *
+ * Important! When updating to next Amplify.JS release, remember to change:
+ *
  * - JSON.stringify -> store.stringify to keep support for cyclic objects
  * - JSON.parse -> store.parse (cyclic objects)
  * - store.name -> store.prefix (check)
@@ -560,7 +560,7 @@ if (!JSON) {
  */
 (function(exports) {
 
-    var store = exports.store;	
+    var store = exports.store;
 
     if (!store) {
 	throw new Error('amplify.shelf.js: shelf.js core not found.');
@@ -793,14 +793,14 @@ if (!JSON) {
 /**
  * ## Cookie storage for Shelf.js
  * Copyright 2015 Stefano Balietti
- * 
+ *
  * Original library from:
  * See http://code.google.com/p/cookies/
  */
 (function(exports) {
 
     var store = exports.store;
-    
+
     if (!store) {
 	throw new Error('cookie.shelf.js: shelf.js core not found.');
     }
@@ -810,7 +810,7 @@ if (!JSON) {
     }
 
     var cookie = (function() {
-	
+
 	var resolveOptions, assembleOptionsString, parseCookies, constructor;
         var defaultOptions = {
 	    expiresAt: null,
@@ -818,7 +818,7 @@ if (!JSON) {
 	    domain:  null,
 	    secure: false
 	};
-	
+
 	/**
 	 * resolveOptions - receive an options object and ensure all options
          * are present and valid, replacing with defaults where necessary
@@ -829,7 +829,7 @@ if (!JSON) {
 	 * @return Object complete and valid options object
 	 */
 	resolveOptions = function(options){
-	    
+
 	    var returnValue, expireDate;
 
 	    if(typeof options !== 'object' || options === null){
@@ -867,7 +867,7 @@ if (!JSON) {
 
 	    return returnValue;
 	};
-	
+
 	/**
 	 * assembleOptionsString - analyze options and assemble appropriate string for setting a cookie with those options
 	 *
@@ -886,7 +886,7 @@ if (!JSON) {
 		    (options.secure === true ? '; secure' : '')
 	    );
 	};
-	
+
 	/**
 	 * parseCookies - retrieve document.cookie string and break it into a hash with values decoded and unserialized
 	 *
@@ -924,7 +924,7 @@ if (!JSON) {
 
 	constructor = function(){};
 
-	
+
 	/**
 	 * get - get one, several, or all cookies
 	 *
@@ -933,7 +933,7 @@ if (!JSON) {
 	 * @return Mixed - Value of cookie as set; Null:if only one cookie is requested and is not found; Object:hash of multiple or all cookies (if multiple or all requested);
 	 */
 	constructor.prototype.get = function(cookieName) {
-	    
+
 	    var returnValue, item, cookies = parseCookies();
 
 	    if(typeof cookieName === 'string') {
@@ -956,7 +956,7 @@ if (!JSON) {
 
 	    return returnValue;
 	};
-	
+
 	/**
 	 * filter - get array of cookies whose names match the provided RegExp
 	 *
@@ -979,7 +979,7 @@ if (!JSON) {
 
 	    return returnValue;
 	};
-	
+
 	/**
 	 * set - set or delete a cookie with desired options
 	 *
@@ -1001,13 +1001,13 @@ if (!JSON) {
 
 	    else if (typeof value !== 'string'){
                 //						if(typeof JSON === 'object' && JSON !== null && typeof store.stringify === 'function') {
-                //							
+                //
                 //							value = JSON.stringify(value);
                 //						}
                 //						else {
                 //							throw new Error('cookies.set() received non-string value and could not serialize.');
                 //						}
-		
+
 		value = store.stringify(value);
 	    }
 
@@ -1016,7 +1016,7 @@ if (!JSON) {
 
 	    document.cookie = cookieName + '=' + encodeURIComponent(value) + optionsString;
 	};
-	
+
 	/**
 	 * del - delete a cookie (domain and path options must match those with which the cookie was set; this is really an alias for set() with parameters simplified for this use)
 	 *
@@ -1045,7 +1045,7 @@ if (!JSON) {
 		}
 	    }
 	};
-	
+
 	/**
 	 * test - test whether the browser is accepting cookies
 	 *
@@ -1064,7 +1064,7 @@ if (!JSON) {
 
 	    return returnValue;
 	};
-	
+
 	/**
 	 * setOptions - set default options for calls to cookie methods
 	 *
@@ -1087,7 +1087,7 @@ if (!JSON) {
     if (cookie.test()) {
 
 	store.addType("cookie", function(key, value, options) {
-	    
+
 	    if ('undefined' === typeof key) {
 		return cookie.get();
 	    }
@@ -1095,18 +1095,19 @@ if (!JSON) {
 	    if ('undefined' === typeof value) {
 		return cookie.get(key);
 	    }
-	    
+
 	    // Set to NULL means delete
 	    if (value === null) {
 		cookie.del(key);
 		return null;
 	    }
 
-	    return cookie.set(key, value, options);		
+	    return cookie.set(key, value, options);
 	});
     }
 
 }(this));
+
 /**
  * # JSUS: JavaScript UtilS.
  * Copyright(c) 2014 Stefano Balietti
@@ -4855,6 +4856,12 @@ if (!JSON) {
  *
  * NDDB is a powerful and versatile object database for node.js and the browser.
  *
+ * TODO: When using index.update() and the update is suppose to remove the element
+ * from view and hashes, for example becausea property is deleted. index.update()
+ * fails doing so. Should be fixed. At the moment the only solution seems to
+ * reintroduce a global index for all items and to use that to quickly lookup items
+ * in views and hashes.
+ *
  * See README.md for help.
  * ---
  */
@@ -5253,6 +5260,7 @@ if (!JSON) {
         this.filters['in'] = function(d, value, comparator) {
             if ('object' === typeof d) {
                 return function(elem) {
+                    debugger
                     var i, len;
                     len = value.length;
                     for (i = 0; i < len; i++) {
@@ -5312,7 +5320,7 @@ if (!JSON) {
             RegExp.escape = function(str) {
                 return str.replace(/([.*+?^=!:${}()|[\]\/\\])/g, '\\$1');
             };
-            
+
             regex = RegExp.escape(value);
             regex = regex.replace(/%/g, '.*').replace(/_/g, '.');
             regex = new RegExp('^' + regex + '$', sensitive);
@@ -5329,12 +5337,12 @@ if (!JSON) {
                         }
                     }
                 };
-            } 
+            }
             else if (d === '*') {
                 return function(elem) {
                     var d;
                     for (d in elem) {
-                        if ('undefined' !== typeof elem[d]) { 
+                        if ('undefined' !== typeof elem[d]) {
                             if (regex.test(elem[d])) {
                                 return elem;
                             }
@@ -5344,7 +5352,7 @@ if (!JSON) {
             }
             else {
                 return function(elem) {
-                    if ('undefined' !== typeof elem[d]) { 
+                    if ('undefined' !== typeof elem[d]) {
                         if (regex.test(elem[d])) {
                             return elem;
                         }
@@ -5353,15 +5361,15 @@ if (!JSON) {
             }
         }
 
-        // Like operator (Case Sensitive). 
+        // Like operator (Case Sensitive).
         this.filters['LIKE'] = function likeOperator(d, value, comparator) {
             return generalLike(d, value, comparator);
         };
-    
-        // Like operator (Case Insensitive). 
+
+        // Like operator (Case Insensitive).
         this.filters['iLIKE'] = function likeOperatorI(d, value, comparator) {
             return generalLike(d, value, comparator, 'i');
-        };            
+        };
 
     };
 
@@ -5677,7 +5685,7 @@ if (!JSON) {
 
         // Cloning.
         options = J.clone(options);
-        
+
         // Removing unwanted options.
         for (i in leaveOut) {
             if (leaveOut.hasOwnProperty(i)) {
@@ -6127,7 +6135,7 @@ if (!JSON) {
                 this._viewIt(o);
             };
         }
- 
+
         // Reset current indexes.
         this.resetIndexes({h: h, v: v, i: i});
 
@@ -6142,10 +6150,15 @@ if (!JSON) {
      *
      * Indexes an element
      *
+     * Parameter _oldIdx_ is needed if indexing is updating a previously
+     * indexed item. In fact if new index is different, the old one must
+     * be deleted.
+     *
      * @param {object} o The element to index
-     * @param {object} o The position of the element in the database array
+     * @param {number} dbidx The position of the element in the database array
+     * @param {string} oldIdx Optional. The old index name, if any.
      */
-    NDDB.prototype._indexIt = function(o, dbidx) {
+    NDDB.prototype._indexIt = function(o, dbidx, oldIdx) {
         var func, id, index, key;
         if (!o || J.isEmpty(this.__I)) return;
 
@@ -6153,11 +6166,19 @@ if (!JSON) {
             if (this.__I.hasOwnProperty(key)) {
                 func = this.__I[key];
                 index = func(o);
-
-                if ('undefined' === typeof index) continue;
-
-                if (!this[key]) this[key] = new NDDBIndex(key, this);
-                this[key]._add(index, dbidx);
+                // If the same object has been  previously
+                // added with another index delete the old one.
+                if (index !== oldIdx) {
+                    if ('undefined' !== typeof oldIdx) {
+                        if ('undefined' !== typeof this[key].resolve[oldIdx]) {
+                            delete this[key].resolve[oldIdx];
+                        }
+                    }
+                }
+                if ('undefined' !== typeof index) {
+                    if (!this[key]) this[key] = new NDDBIndex(key, this);
+                    this[key]._add(index, dbidx);
+                }
             }
         }
     };
@@ -6187,7 +6208,7 @@ if (!JSON) {
                     settings = this.cloneSettings({V: ''});
                     this[key] = new NDDB(settings);
                 }
-                this[key].insert(o);
+                this[key].insert(o);1
             }
         }
     };
@@ -6310,8 +6331,8 @@ if (!JSON) {
     function queryError(text, d, op, value) {
         var miss, err;
         miss = '(?)';
-        err = this._getConstrName() + '._analyzeQuery: ' + text + 
-            '. Malformed query: ' + d || miss + ' ' + op || miss + 
+        err = this._getConstrName() + '._analyzeQuery: ' + text +
+            '. Malformed query: ' + d || miss + ' ' + op || miss +
             ' ' + value || miss + '.';
         throw new Error(err);
     }
@@ -6353,7 +6374,7 @@ if (!JSON) {
             if (J.in_array(op,['><', '<>', 'in', '!in'])) {
 
                 if (!(value instanceof Array)) {
-                    errText = 'range-queries need an array as third parameter';                        
+                    errText = 'range-queries need an array as third parameter';
                     queryError.call(this, errText, d, op, value);
                 }
                 if (op === '<>' || op === '><') {
@@ -6602,11 +6623,13 @@ if (!JSON) {
      * @see NDDB.last
      */
     NDDB.prototype.limit = function(limit) {
-        limit = limit || 0;
+        var db;
+        if ('number' !== typeof limit) {
+            throw new TypeError(this._getConstrName() +
+                                '.limit: limit must be number.');
+        }
         if (limit === 0) return this.breed();
-        var db = (limit > 0) ? this.db.slice(0, limit) :
-            this.db.slice(limit);
-
+        db = (limit > 0) ? this.db.slice(0, limit) : this.db.slice(limit);
         return this.breed(db);
     };
 
@@ -6958,12 +6981,10 @@ if (!JSON) {
 
                     if ('undefined' !== typeof key) {
                         if (comparator(foreign_key, key)) {
-                            // Inject the matched obj into the
-                            // reference one
+                            // Inject the matched obj into the reference one.
                             o = J.clone(this.db[i]);
-                            o2 = (select) ?
-                                J.subobj(this.db[j], select)
-                                : this.db[j];
+                            o2 = select ?
+                                J.subobj(this.db[j], select) : this.db[j];
                             o[pos] = o2;
                             out.push(o);
                         }
@@ -7607,11 +7628,13 @@ if (!JSON) {
      * @see JSUS.arrayDiff
      */
     NDDB.prototype.diff = function(nddb) {
-        if (!nddb || !nddb.length) return this;
         if ('object' === typeof nddb) {
             if (nddb instanceof NDDB || nddb instanceof this.constructor) {
                 nddb = nddb.db;
             }
+        }
+        if (!nddb || !nddb.length) {
+            return this.breed([]);
         }
         return this.breed(J.arrayDiff(this.db, nddb));
     };
@@ -7633,11 +7656,13 @@ if (!JSON) {
      * @see JSUS.arrayIntersect
      */
     NDDB.prototype.intersect = function(nddb) {
-        if (!nddb || !nddb.length) return this;
         if ('object' === typeof nddb) {
             if (nddb instanceof NDDB || nddb instanceof this.constructor) {
-                var nddb = nddb.db;
+                nddb = nddb.db;
             }
+        }
+        if (!nddb || !nddb.length) {
+            return this.breed([]);
         }
         return this.breed(J.arrayIntersect(this.db, nddb));
     };
@@ -8261,7 +8286,7 @@ if (!JSON) {
      * @see NDDBIndex.get
      * @see NDDBIndex.remove
      */
-        NDDBIndex.prototype.update = function(idx, update) {
+    NDDBIndex.prototype.update = function(idx, update) {
         var o, dbidx, nddb;
         dbidx = this.resolve[idx];
         if ('undefined' === typeof dbidx) return false;
@@ -8272,7 +8297,7 @@ if (!JSON) {
         // We do indexes separately from the other components of _autoUpdate
         // to avoid looping through all the other elements that are unchanged.
         if (nddb.__update.indexes) {
-            nddb._indexIt(o, dbidx);
+            nddb._indexIt(o, dbidx, idx);
             nddb._hashIt(o);
             nddb._viewIt(o);
         }
@@ -8318,6 +8343,7 @@ if (!JSON) {
     , 'undefined' !== typeof JSUS ? JSUS : module.parent.exports.JSUS || require('JSUS').JSUS
     , ('object' === typeof module && 'function' === typeof require) ? module.parent.exports.store || require('shelf.js/build/shelf-fs.js').store : this.store
 );
+
 /**
  * # nodeGame: Social Experiments in the Browser
  * Copyright(c) 2014 Stefano Balietti
@@ -8369,11 +8395,11 @@ if (!JSON) {
     // TODO: do we need these defaults ?
 
     /**
-     *  ### node.constants.verbosity
+     * ### node.constants.verbosity
      *
-     *  The minimum level for a log entry to be displayed as output
+     * The minimum level for a log entry to be displayed as output
      *
-     *  Defaults, only errors are displayed.
+     * Default: only errors are displayed
      *
      */
     k.verbosity = k.verbosity_levels.warn;
@@ -8381,9 +8407,9 @@ if (!JSON) {
     /**
      * ### node.constants.remoteVerbosity
      *
-     *  The minimum level for a log entry to be reported to the server
+     * The minimum level for a log entry to be reported to the server
      *
-     *  Defaults, only errors are displayed.
+     * Default: only errors are displayed
      */
     k.remoteVerbosity = k.verbosity_levels.warn;
 
@@ -9165,7 +9191,7 @@ if (!JSON) {
     /**
      * ## EventEmitterManager constructor
      *
-     * @param {NodeGameClient} A reference to the node object
+     * @param {NodeGameClient} node A reference to the node object
      */
     function EventEmitterManager(node) {
 
@@ -9189,12 +9215,13 @@ if (!JSON) {
      * Creates a group of event emitters
      *
      * Accepts a variable number of input parameters.
+     * These are the names of existing event emitters.
      *
      * Adds _global_ methods: emit, on, once, remove, printAll methods to be
      * applied to every element of the group
      *
-     * @param {string} groupName
-     * @param {string} The name of the event emitter precendtly created
+     * @param {string} groupName The name of the event emitter group
+     *
      * @return {object} A reference to the event emitter group
      *
      * @see EventEmitterManager.createEE
@@ -9204,17 +9231,19 @@ if (!JSON) {
         len = arguments.length, that = this;
 
         if (!len) {
-            throw new Error('EEGroup needs a name and valid members.');
+            throw new Error('EventEmitterManager.createEEGroup: ' +
+                            'EEGroup needs a name and valid members.');
         }
         if (len === 1) {
-            throw new Error('EEGroup needs at least one member.');
+            throw new Error('EventEmitterManager.createEEGroup: ' +
+                            'EEGroup needs at least one member.');
         }
 
         // Checking if each ee exist.
         for (i = 1; i < len; i++) {
             if ('string' !== typeof arguments[i]) {
-                throw new TypeError(
-                    'EventEmitter name must be a string');
+                throw new TypeError('EventEmitterManager.createEEGroup: ' +
+                                    'EventEmitter name must be a string');
             }
             if (!this.ee[arguments[i]]) {
                 throw new Error('EventEmitterManager.createEEGroup: ' +
@@ -9378,15 +9407,16 @@ if (!JSON) {
      *
      * Accepts a variable number of input parameters.
      *
-     * @param {string} The name of the event
+     * @param {string} eventName The name of the event
+     *
      * @return {mixed} The values returned by all fired event listeners
      */
-    EventEmitterManager.prototype.emit = function() {
-        var i, event, tmpRes, res;
-        event = arguments[0];
-        if ('string' !== typeof event) {
+    EventEmitterManager.prototype.emit = function(eventName) {
+        var i, tmpRes, res;
+
+        if ('string' !== typeof eventName) {
             throw new TypeError(
-                'EventEmitterManager.emit: event must be string.');
+                'EventEmitterManager.emit: eventName must be string.');
         }
         res = [];
         for (i in this.ee) {
@@ -9405,14 +9435,14 @@ if (!JSON) {
      *
      * Removes an event / event listener from all registered event emitters
      *
-     * @param {string} The name of the event
+     * @param {string} eventName The name of the event
      * @param {function} listener Optional A reference of the function to remove
      */
-    EventEmitterManager.prototype.remove = function(event, listener) {
+    EventEmitterManager.prototype.remove = function(eventName, listener) {
         var i;
-        if ('string' !== typeof event) {
+        if ('string' !== typeof eventName) {
             throw new TypeError('EventEmitterManager.remove: ' +
-                                'event must be string.');
+                                'eventName must be string.');
         }
         if (listener && 'function' !== typeof listener) {
             throw new TypeError('EventEmitterManager.remove: ' +
@@ -9420,7 +9450,7 @@ if (!JSON) {
         }
         for (i in this.ee) {
             if (this.ee.hasOwnProperty(i)) {
-                this.ee[i].remove(event, listener);
+                this.ee[i].remove(eventName, listener);
             }
         }
     };
@@ -9858,8 +9888,9 @@ if (!JSON) {
      *
      * The original array is modified.
      *
-     * @param {Array} array The array to transform
-     * @return {Array} array The array of `PlayerList` objects
+     * @param {array} array The array to transform
+     *
+     * @return {array} array The array of `PlayerList` objects
      */
     PlayerList.array2Groups = function (array) {
         if (!array) return;
@@ -10124,7 +10155,7 @@ if (!JSON) {
      *
      * @param {GameStage} gameStage The GameStage of reference
      * @param {boolean} upTo Optional. If TRUE, all players in the stage up to the
-     *   given step are checked. Defaults, FALSE.
+     *   given step are checked. Default: FALSE
      *
      * @return {boolean} TRUE, if all checked players have terminated the stage
      * @see PlayerList.arePlayersSync
@@ -10161,7 +10192,7 @@ if (!JSON) {
     /**
      * ### PlayerList.arePlayersSync
      *
-     * Verifies that all players in the same stage are at the same stageLevel.
+     * Verifies that all players in the same stage are at the same stageLevel
      *
      * Players at other game steps are ignored, unless the `upTo` parameter is
      * set. In this case, if players are found in earlier game steps, the method
@@ -10176,8 +10207,11 @@ if (!JSON) {
      players in other stages - ignore - false
 
      * @param {GameStage} gameStage The GameStage of reference
-     * @param {numeric} stageLevel The stageLevel of reference
-     * @param {string} Optional. type. Flag to say what players will be checked.
+     * @param {number} stageLevel The stageLevel of reference
+     * @param {string} type Optional. Flag to say what players will be checked
+     * @param {boolean} checkOutliers Optional. Whether to check for outliers.
+     *   Can't be TRUE if type is 'exact'
+     *
      * @return {boolean} TRUE, if all checked players are sync
      */
     PlayerList.prototype.arePlayersSync = function(gameStage, stageLevel, type, checkOutliers) {
@@ -10241,7 +10275,7 @@ if (!JSON) {
                 // Players in current stage up to the reference step.
                 cmp = GameStage.compare(gameStage, p.stage);
 
-                // Player in another stage or in later step
+                // Player in another stage or in later step.
                 if (gameStage.stage !== p.stage.stage || cmp < 0) {
                     outlier = true;
                     break;
@@ -10272,6 +10306,7 @@ if (!JSON) {
      * PlayerList
      *
      * @param {string} eol Optional. End of line separator between players
+     *
      * @return {string} out The string representation of the stage of the PlayerList
      */
     PlayerList.prototype.toString = function(eol) {
@@ -10290,7 +10325,8 @@ if (!JSON) {
      * Creates N random groups of players
      *
      * @param {number} N The number of groups
-     * @return {Array} Array containing N `PlayerList` objects
+     *
+     * @return {array} Array containing N `PlayerList` objects
      *
      * @see JSUS.getNGroups
      */
@@ -10306,7 +10342,8 @@ if (!JSON) {
      * Creates random groups of N players
      *
      * @param {number} N The number player per group
-     * @return {Array} Array containing N `PlayerList` objects
+     *
+     * @return {array} Array containing N `PlayerList` objects
      *
      * @see JSUS.getGroupsSizeN
      */
@@ -10322,7 +10359,8 @@ if (!JSON) {
      * Returns a set of N random players
      *
      * @param {number} N The number of players in the random set. Defaults N = 1
-     * @return {Player|Array} A single player object or an array of
+     *
+     * @return {Player|array} A single player object or an array of
      */
     PlayerList.prototype.getRandom = function(N) {
         if (!N) N = 1;
@@ -10863,7 +10901,7 @@ if (!JSON) {
      * Creates a new instance of Stager
      *
      * @param {object} stateObj Optional. State to initialize the new Stager
-     *  object with. See `Stager.setState`.
+     *   object with. See `Stager.setState`.
      *
      * @see Stager.setState
      */
@@ -11048,7 +11086,7 @@ if (!JSON) {
      */
     Stager.prototype.registerGeneralNext = function(func) {
         if (func !== null && 'function' !== typeof func) {
-            throw new TypError('Stager.registerGeneralNext: ' +
+            throw new TypeError('Stager.registerGeneralNext: ' +
                                'func must be function or undefined.');
         }
         this.generalNextFunction = func;
@@ -11064,10 +11102,10 @@ if (!JSON) {
      * Available only when nodegame is executed in _flexible_ mode.
      *
      * @param {string} id The name of the stage after which the decider function
-     *  will be called
+     *   will be called
      * @param {function} func The decider callback. It should return the name
-     *  of the next stage, 'NODEGAME_GAMEOVER' to end the game or FALSE for
-     *  sequence end.
+     *   of the next stage, 'NODEGAME_GAMEOVER' to end the game or FALSE for
+     *   sequence end.
      *
      * @see Stager.registerGeneralNext
      */
@@ -11212,7 +11250,7 @@ if (!JSON) {
      * Sets onInit function
      *
      * @param {function|null} func The onInit function.
-     *  NULL can be given to signify non-existence.
+     *   NULL can be given to signify non-existence.
      *
      * @see Stager.onInit
      */
@@ -11244,7 +11282,7 @@ if (!JSON) {
      * Sets onGameover function
      *
      * @param {function|null} func The onGameover function.
-     *  NULL can be given to signify non-existence.
+     *   NULL can be given to signify non-existence.
      *
      * @see Stager.onGameover
      */
@@ -11552,7 +11590,7 @@ if (!JSON) {
      *
      * @param {string} id A valid stage name with optional alias
      * @param {function} func Optional. Callback returning TRUE for repetition.
-     *  Defaults, a function that returns always TRUE.
+     *   Default: a function that returns always TRUE
      *
      * @return {Stager|null} this object on success, NULL on error
      *
@@ -11574,7 +11612,7 @@ if (!JSON) {
      *
      * @param {string} id A valid stage name with optional alias
      * @param {function} func Optional. Callback returning TRUE for repetition.
-     *  Defaults, a function that returns always TRUE.
+     *   Default: a function that returns always TRUE
      *
      * @return {Stager|null} this object on success, NULL on error
      *
@@ -11592,8 +11630,8 @@ if (!JSON) {
      * Returns the sequence of stages
      *
      * @param {string} format 'hstages' for an array of human-readable stage
-     *  descriptions, 'hsteps' for an array of human-readable step descriptions,
-     *  'o' for the internal JavaScript object
+     *   descriptions, 'hsteps' for an array of human-readable step descriptions,
+     *   'o' for the internal JavaScript object
      *
      * @return {array|object|null} The stage sequence in requested format. NULL
      *   on error.
@@ -11731,7 +11769,7 @@ if (!JSON) {
      *
      * @param {object} stateObj The Stager's state
      * @param {string} updateRule Optional. Whether to 'replace' (default) or
-     *  to 'append'.
+     *   to 'append'.
      *
      * @see Stager.getState
      */
@@ -11895,7 +11933,7 @@ if (!JSON) {
      *
      * @param {string|array} ids Valid stage name(s)
      * @param {boolean} useSeq Optional. Whether to generate a singleton
-     *  sequence.  TRUE by default.
+     *   sequence.  TRUE by default.
      *
      * @return {object|null} The state object on success, NULL on error
      *
@@ -11994,6 +12032,7 @@ if (!JSON) {
      *
      * @param {object} step The step object
      * @param {boolean} unique If TRUE, checks also for id uniqueness
+     *
      * @return {string} NULL for valid stages, error description otherwise
      *
      * @see Stager.addStep
@@ -12021,6 +12060,7 @@ if (!JSON) {
      * Checks for referenced step existence.
      *
      * @param {object} stage The stage object
+     *
      * @return {string} NULL for valid stages, error description otherwise
      *
      * @see Stager.addStage
@@ -13054,7 +13094,7 @@ if (!JSON) {
  *
  * Static factory of objects of type `GameMsg`.
  *
- * @see GameMSg
+ * @see GameMsg
  * @see node.target
  * @see node.action
  */
@@ -13093,7 +13133,8 @@ if (!JSON) {
      * By default GAMECOMMAND, REDIRECT, PCONNET, PDISCONNECT, PRECONNECT
      * have priority 1, all the other targets have priority 0.
      *
-     * @param {object} Optional. The init object
+     * @param {object} msg Optional. The init object
+     *
      * @return {GameMsg} The full GameMsg object
      *
      * @see GameMsg
@@ -13228,8 +13269,10 @@ if (!JSON) {
     // ## Global scope
 
     var GameMsg = parent.GameMsg,
+    GameMsgGenerator = parent.GameMsgGenerator,
     SocketFactory = parent.SocketFactory,
-    J = parent.JSUS;
+    J = parent.JSUS,
+    constants = parent.constants;
 
     var action = parent.action;
 
@@ -13689,8 +13732,9 @@ if (!JSON) {
      *
      * The msg is actually received by the client itself as well.
      *
-     * @param {GameMsg} The game message to send
-     * @return {boolean} TRUE, on success.
+     * @param {GameMsg} msg The game message to send
+     *
+     * @return {boolean} TRUE on success
      *
      * @see GameMsg
      *
@@ -13761,7 +13805,8 @@ if (!JSON) {
 
     var GameMsg = node.GameMsg,
     Player = node.Player,
-    GameMsgGenerator = node.GameMsgGenerator;
+    GameMsgGenerator = node.GameMsgGenerator,
+    constants = node.constants;
 
     exports.SocketIo = SocketIo;
 
@@ -13785,9 +13830,19 @@ if (!JSON) {
             node.info('socket.io connection open');
             node.socket.onConnect.call(node.socket);
             socket.on('message', function(msg) {
+                debugger;
                 msg = node.socket.secureParse(msg);
                 if (msg) {
                     node.socket.onMessage(msg);
+                    if (msg.reliable) {
+                        // send ACK
+                        var ack = new GameMsgGenerator(node).create({
+                            target: constants.target.ACK,
+                            text: msg.id,
+                        });
+
+                        this.send(ack);
+                    }
                 }
             });
         });
@@ -13912,7 +13967,7 @@ if (!JSON) {
      *
      * Adds `node.player` and `node.game.getCurrentGameStage()`
      *
-     * @param {NodeGameClient} A NodeGameClient instance
+     * @param {NodeGameClient} node A NodeGameClient instance
      */
     GameDB.prototype.syncWithNode = function(node) {
         if ('object' !== typeof node) {
@@ -15437,7 +15492,7 @@ if (!JSON) {
      * Checks also the GameWindow object.
      *
      * @param {boolean} strict If TRUE, PLAYING can be emitted only coming
-     *   from the LOADED stage level. Defaults, TRUE.
+     *   from the LOADED stage level. Default: TRUE
      * @return {boolean} TRUE, if the PLAYING event should be emitted.
      */
     Game.prototype.shouldEmitPlaying = function(strict) {
@@ -15746,7 +15801,8 @@ if (!JSON) {
      * Returns TRUE, if a variable is registred
      *
      * @param {string} path A previously registred variable
-     * @param {boolean} TRUE, if the variable is registered
+     *
+     * @return {boolean} TRUE, if the variable is registered
      *
      * @see SessionManager.register
      * @see SessionManager.unregister
@@ -15973,7 +16029,7 @@ if (!JSON) {
      * The uniqueness of each element is not checked, and depending on the
      * matching algorithm used, it may or may not be a problem.
      *
-     * @param {array} The set of elements to later match
+     * @param {array} elements The set of elements to later match
      */
     GroupManager.prototype.addElements = function(elements) {
         this.elements = this.elements.concat(elements);
@@ -15988,6 +16044,7 @@ if (!JSON) {
      * of current groups.
      *
      * @param {number} N The requested number of groups
+     *
      * @return {array} out The names of the created groups
      */
     GroupManager.prototype.createNGroups = function(N) {
@@ -16020,7 +16077,9 @@ if (!JSON) {
      * The group must be already existing.
      *
      * @param {string} groupName The name of the group
-     * @param {string|array|PlayerList} The elements to assign to a group
+     * @param {string|array|PlayerList} elements The elements to assign to a
+     *   group
+     *
      * @return {Group} The updated group
      */
     GroupManager.prototype.assign2Group = function(groupName, elements) {
@@ -17628,7 +17687,7 @@ if (!JSON) {
      *
      * @param {string} event The name of the event
      * @param {number} maxWait Optional. The maximum time (in milliseconds)
-     *   to wait before emitting the event. Defaults, 6000
+     *   to wait before emitting the event. Default: 6000
      */
     Timer.prototype.randomEmit = function(event, maxWait) {
         randomFire.call(this, event, maxWait, true);
@@ -17641,9 +17700,9 @@ if (!JSON) {
      *
      * Respects pausing / resuming.
      *
-     * @param {function} The callback function to execute
+     * @param {function} func The callback function to execute
      * @param {number} maxWait Optional. The maximum time (in milliseconds)
-     *   to wait before executing the callback. Defaults, 6000
+     *   to wait before executing the callback. Default: 6000
      */
     Timer.prototype.randomExec = function(func, maxWait) {
         randomFire.call(this, func, maxWait, false);
@@ -17808,7 +17867,7 @@ if (!JSON) {
      *  var options = {
      *      // The length of the interval.
      *      milliseconds: 4000,
-     *      // How often to update the time counter. Defaults, milliseconds.
+     *      // How often to update the time counter. Default: milliseconds
      *      update: 1000,
      *      // An event or function to fire when the timer expires.
      *      timeup: 'MY_EVENT',
@@ -17851,7 +17910,7 @@ if (!JSON) {
             }
         }
 
-        // Set startPaused option. if specified. Defaults, FALSE.
+        // Set startPaused option. if specified. Default: FALSE
         this.startPaused = 'undefined' !== options.startPaused ?
             options.startPaused : false;
 
@@ -18266,7 +18325,7 @@ if (!JSON) {
          *
          * The minimum level for a log entry to be displayed as output
          *
-         * Defaults, only errors are displayed.
+         * Default: only errors are displayed
          */
         this.verbosity = constants.verbosity_levels.warn;
 
@@ -18275,7 +18334,7 @@ if (!JSON) {
          *
          * The name of this node, used in logging output
          *
-         * Defaults, 'ng'
+         * Default: 'ng'
          */
         this.nodename = 'ng';
 
@@ -18284,7 +18343,7 @@ if (!JSON) {
          *
          * The minimum level for a log entry to be reported to the server
          *
-         * Defaults, only errors are reported.
+         * Default: only errors are reported
          *
          * @experimental
          */
@@ -18668,7 +18727,7 @@ if (!JSON) {
          * @param {object} stagerState Stager state which is passed
          *   to `Stager.setState`
          * @param {string} updateRule Optional. Accepted: <replace>, <append>.
-         *   Defaults, 'replace'.
+         *   Default: 'replace'
          *
          * @see node.game.plot
          * @see Stager.setState
@@ -18700,7 +18759,7 @@ if (!JSON) {
          *
          * @param {PlayerList} playerList The new player list
          * @param {string} updateRule Optional. Accepted: <replace>, <append>.
-         *   Defaults, 'replace'.
+         *   Default: 'replace'
          */
         this.registerSetup('plist', function(playerList, updateRule) {
             updatePlayerList.call(this, 'pl', playerList, updateRule);
@@ -18713,7 +18772,7 @@ if (!JSON) {
          *
          * @param {PlayerList} monitorList The new monitor list
          * @param {string} updateRule Optional. Accepted: <replace>, <append>.
-         *   Defaults, 'replace'.
+         *   Default: 'replace'
          */
         this.registerSetup('mlist', function(monitorList, updateRule) {
             updatePlayerList.call(this, 'ml', monitorList, updateRule);
@@ -18724,7 +18783,7 @@ if (!JSON) {
          *
          * Sets the default language
          *
-         * @param {object} The language object to set as default.
+         * @param {object} language The language object to set as default.
          */
         this.registerSetup('lang', function(language) {
             if (!language) return null;
@@ -19330,7 +19389,7 @@ if (!JSON) {
      *
      * Creates player object and places it in node.player
      *
-     * @param {object} A player object with a valid id property
+     * @param {object} player A player object with a valid id property
      * @return {object} The player object
      *
      * @see node.setup.player
@@ -19416,7 +19475,7 @@ if (!JSON) {
      *
      * TODO: add proper doc
      *
-     * @param {EventEmitter} The current event emitter obj
+     * @return {EventEmitter} The current event emitter obj
      */
     NGC.prototype.getCurrentEventEmitter = function() {
         // NodeGame default listeners
@@ -19562,7 +19621,8 @@ if (!JSON) {
      * Stores a key-value pair in the server memory
      *
      * @param {string} key An alphanumeric (must not be unique)
-     * @param {mixed} The value to store (can be of any type)
+     * @param {mixed} value The value to store (can be of any type)
+     * @param {string} to The recipient
      *
      * @return {boolean} TRUE, if SET message is sent
      */
@@ -19620,11 +19680,11 @@ if (!JSON) {
      *
      * @param {string} key The label of the GET message
      * @param {function} cb The callback function to handle the return message
-     * @param {string} to Optional. The recipient of the msg. Defaults, SERVER
+     * @param {string} to Optional. The recipient of the msg. Default: SERVER
      * @param {mixed} params Optional. Additional parameters to send along
      * @param {number} timeout Optional. The number of milliseconds after which
      *   the listener will be removed. If equal -1, the listener will not be
-     *   removed. Defaults, 0.
+     *   removed. Default: 0
      *
      * @return {boolean} TRUE, if GET message is sent and listener registered
      */
@@ -20097,7 +20157,7 @@ if (!JSON) {
      *
      * If executed once, it requires a force flag to re-add the listeners
      *
-     * @param {boolean} TRUE, to force re-adding the listeners
+     * @param {boolean} force Whether to force re-adding the listeners
      * @return {boolean} TRUE on success
      */
     NGC.prototype.addDefaultIncomingListeners = function(force) {
@@ -20504,7 +20564,7 @@ if (!JSON) {
      *
      * If executed once, it requires a force flag to re-add the listeners.
      *
-     * @param {boolean} TRUE, to force re-adding the listeners
+     * @param {boolean} force Whether to force re-adding the listeners
      * @return {boolean} TRUE on success
      */
     NGC.prototype.addDefaultInternalListeners = function(force) {
