@@ -4535,17 +4535,12 @@ if (!JSON) {
      * Returns a string representation of the current date
      * and time formatted as follows:
      *
-     * dd-mm-yyyy hh:mm:ss milliseconds
+     * YYYY-MM-DDTHH:mm:ss.sssZ
      *
-     * @return {string} Formatted time string hh:mm:ss
+     * @return {string} Formatted time string YYYY-MM-DDTHH:mm:ss.sssZ
      */
     TIME.getDate = TIME.getFullDate = function() {
-        var d = new Date();
-        var date = d.getUTCDate() + '-' + (d.getUTCMonth()+1) + '-' +
-            d.getUTCFullYear() + ' ' + d.getHours() + ':' + d.getMinutes() +
-            ':' + d.getSeconds() + ' ' + d.getMilliseconds();
-
-        return date;
+        return new Date().toISOString();
     };
 
     /**
@@ -8669,6 +8664,26 @@ if (!JSON) {
         NONE: 0
     };
 
+    /**
+     * ### node.constants.reliableMessaging
+     *
+     * Enables the reliable sending of messages. Each GameMessage has a
+     * reliable field which is ignored if this setting is not turned on.
+     *
+     * @type {boolean}
+     */
+    k.reliableMessaging = true;
+
+    /**
+     * ### node.constants.reliableRetryInterval
+     *
+     * Time interval in milliseconds between two consecutive tries of sending
+     * reliable messages.
+     *
+     * @type {number}
+     */
+    k.reliableRetryInterval = 30000;
+
 })('undefined' != typeof node ? node : module.exports);
 
 /**
@@ -10725,6 +10740,16 @@ if (!JSON) {
          * E.g. between nodeGame servers
          */
         this.forward = 0;
+
+        /**
+         * ### GameMsg.intervalID
+         *
+         * Only used when reliable messaging is active.
+         * Is used to disable the retry logic for this message.
+         *
+         * @type {number}
+         */
+        this.intervalID = 0;
     }
 
     /**
@@ -13178,11 +13203,128 @@ if (!JSON) {
             text: 'undefined' !== typeof msg.text ? "" + msg.text : null,
             data: 'undefined' !== typeof msg.data ? msg.data : null,
             priority: priority,
-            reliable: msg.reliable || 1
-        });
+            reliable: msg.reliable && node.socket.socket.reliableMessaging
+    });
 
     };
 
+    // ## Closure
+})(
+    'undefined' != typeof node ? node : module.exports,
+    'undefined' != typeof node ? node : module.parent.exports
+);
+
+/**
+ * # MessagingQueue
+ * Copyright(c) 2014 Jan Wilken Doerrie
+ * MIT Licensed
+ *
+ * Handles network connections through Socket.IO
+ * ---
+ */
+
+"use strict";
+
+// Global scope
+
+(function(exports, parent) {
+
+    "use strict";
+
+    exports.MessagingQueue = MessagingQueue;
+
+    var NDDB = parent.NDDB;
+
+    /**
+     * ## MessagingQueue constructor
+     *
+     * Creates an instance of MessagingQueue
+     *
+     * @param {GameServer} server A GameServer instance
+     *
+     * @see GameServer
+     */
+    function MessagingQueue() {
+        var options = {
+            update: {
+                indexes: true
+            }
+        };
+
+        this.msgQueue = new NDDB(options);
+        this.msgQueue.index('msgIdIdx', function (msg) {
+            return msg.id;
+        });
+
+        this.msgQueue.globalCompare = function (o1, o2) {
+            var time1 = new Date(o1.created).getTime();
+            var time2 = new Date(o2.created).getTime();
+            console.log(time1 + ":" + time2);
+            return time2 - time1;
+        }
+
+        this.msgIntQueue = new NDDB(options);
+        this.msgIntQueue.index('msgIdIdx', function (obj) {
+            return obj.msgId;
+        });
+    }
+
+    MessagingQueue.prototype.addMessage = function (msg) {
+        this.validateMessage(msg);
+        this.queue.insert(msg);
+    }
+
+    MessagingQueue.prototype.addMessageWithInterval = function(msg, func, del) {
+        this.validateMessage(msg);
+        debugger;
+        var intervalID = setInterval(func, del);
+        this.msgIntQueue.insert({
+            msgId: msg.id,
+            intId: intervalID
+        });
+    }
+
+    MessagingQueue.prototype.deleteMessageById = function (msgId) {
+        this.msgQueue['msgIdIdx'].remove(msgId);
+    }
+
+    MessagingQueue.prototype.deleteMessageWithInterval = function (msgId) {
+        var intId = this.msgIntQueue.selexec('msgId', '=', msgId)
+            .fetch().intId;
+
+        clearInterval(intId);
+        this.msgIntQueue['msgIdIdx'].remove(msgId);
+    }
+
+    MessagingQueue.prototype.getAllMessagesForClient = function (clientId) {
+        return this.msgQueue.selexec('to', '=', clientId).fetch();
+    }
+
+    MessagingQueue.prototype.validateMessage = function(msg) {
+        if (!msg || "object" !== typeof msg) {
+            throw new TypeError('MessagingQueue.validateMessage: ' +
+            'message must be object.');
+        }
+
+        // Non strict equality checking is used to trigger errors on both 'null'
+        // and 'undefined'.
+        if (msg.id == null) {
+            throw new TypeError("MessagingQueue.validateMessage: " +
+            "message must have an 'id' property.");
+        }
+
+        if (msg.to == null) {
+            throw new TypeError("MessagingQueue.validateMessage: " +
+            "message must have a 'to' property.");
+        }
+
+        if (msg.created == null) {
+            throw new TypeError("MessagingQueue.validateMessage: " +
+            "message must have a 'created' property.");
+        }
+
+        return true;
+    }
     // ## Closure
 })(
     'undefined' != typeof node ? node : module.exports,
@@ -13804,45 +13946,57 @@ if (!JSON) {
     // ## Global scope
 
     var GameMsg = node.GameMsg,
-    Player = node.Player,
-    GameMsgGenerator = node.GameMsgGenerator,
-    constants = node.constants;
+        Player = node.Player,
+        MessagingQueue = node.MessagingQueue,
+        constants = node.constants;
 
     exports.SocketIo = SocketIo;
 
     function SocketIo(node, options) {
         this.node = node;
         this.socket = null;
+        this.messagingQueue = new MessagingQueue();
+        this.reliableMessaging =
+            (options != null && options.reliableMessaging != null) ?
+                options.reliableMessaging : constants.reliableMessaging;
+
+        this.reliableRetryInterval =
+            (options != null && options.reliableRetryInterval != null) ?
+                options.reliableRetryInterval : constants.reliableRetryInterval;
     }
 
     SocketIo.prototype.connect = function(url, options) {
-        var node, socket;
+        var node, socket, that;
+        that = this;
         node = this.node;
 
         if (!url) {
             node.err('cannot connect to empty url.', 'ERR');
             return false;
         }
-
         socket = io.connect(url, options); //conf.io
 
         socket.on('connect', function(msg) {
             node.info('socket.io connection open');
             node.socket.onConnect.call(node.socket);
             socket.on('message', function(msg) {
-                debugger;
                 msg = node.socket.secureParse(msg);
                 if (msg) {
-                    node.socket.onMessage(msg);
-                    if (msg.reliable) {
+                    if (msg.target === constants.target.ACK) {
+                        that.messagingQueue.deleteMessageWithInterval(msg.id);
+                        return;
+                    }
+                    else if (msg.reliable) {
                         // send ACK
-                        var ack = new GameMsgGenerator(node).create({
+                        var ack = node.msg.create({
                             target: constants.target.ACK,
                             text: msg.id,
                         });
 
-                        this.send(ack);
+                        that.send(ack);
                     }
+
+                    node.socket.onMessage(msg);
                 }
             });
         });
@@ -13864,6 +14018,13 @@ if (!JSON) {
     };
 
     SocketIo.prototype.send = function(msg) {
+        var that = this;
+        if (msg.reliable) {
+            this.messagingQueue.addMessageWithInterval(msg,
+                function() {that.socket.send(msg.stringify())},
+                that.reliableRetryInterval);
+        }
+
         this.socket.send(msg.stringify());
     };
 
