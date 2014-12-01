@@ -62,6 +62,14 @@ function configure(servernode) {
     // a certain number of Node.JS listeners.
     servernode.maxListeners = 0;
 
+    // Enables the reliable sending of messages. Each GameMessage has a
+    // reliable field which is ignored if this setting is not turned on.
+    servernode.reliableMessaging = true;
+
+    // Time interval in milliseconds between two consecutive tries of sending
+    // reliable messages.
+    servernode.reliableRetryInterval = 30000;
+
     // AdminServer default options.
     admin = {
 
