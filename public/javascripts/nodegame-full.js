@@ -14041,8 +14041,10 @@ if (!JSON) {
      * Creates a new instance of SocketIo
      *
      * @param {NodeGameClient} node Reference to the node instance
+     * @param {object} options Optional argument to override default settings
+     * @constructor
      */
-    function SocketIo(node) {
+    function SocketIo(node, options) {
 
         // ## Private properties
 
