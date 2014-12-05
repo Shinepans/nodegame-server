@@ -9533,7 +9533,7 @@ if (!JSON) {
         }
 
         // cleaning up the events to remit
-        // @TODO NDDB commands have changed, update
+        // TODO NDDB commands have changed, update
         if (discard) {
             db.select('event', 'in', discard).remove();
         }
@@ -10848,7 +10848,7 @@ if (!JSON) {
      *
      * @return {string} A compact string representing the message
      *
-     * @TODO: Create an hash method as for GameStage
+     * TODO: Create an hash method as for GameStage
      */
     GameMsg.prototype.toSMS = function() {
 
@@ -11513,6 +11513,33 @@ if (!JSON) {
                             stageId + '.');
         }
         J.mixin(this.stages[stageId], update);
+    };
+
+    /**
+     * ### Stager.skip
+     *
+     * Removes one stage from the sequence.
+     *
+     * @param {string} stageId The id of the stage to remove from sequence.
+     * @see Stager.addStage
+     */
+    Stager.prototype.skip = function(stageId) {
+        var i, len;
+        if ('string' !== typeof stageId) {
+            throw new TypeError('Stager.skip: stageId must be a string.');
+        }
+        if (!this.stages[stageId]) {
+            throw new Error('Stager.skip: stageId not found: ' +
+                            stageId + '.');
+        }
+
+        i = -1, len = this.sequence.length;
+        for ( ; ++i < len ; ) {
+            if (this.sequence[i].id === stageId) {
+                this.sequence.splice(i,1);
+                break;
+            }
+        }
     };
 
     /**
@@ -13276,7 +13303,6 @@ if (!JSON) {
 
     MessagingQueue.prototype.addMessageWithInterval = function(msg, func, del) {
         this.validateMessage(msg);
-        debugger;
         var intervalID = setInterval(func, del);
         this.msgIntQueue.insert({
             msgId: msg.id,
@@ -13418,7 +13444,14 @@ if (!JSON) {
 
     var action = parent.action;
 
-    function Socket(node, options) {
+    /**
+     * ## Socket constructor
+     *
+     * Creates a new instance of Socket
+     *
+     * @param {NodeGameClient} node Reference to the node instance
+     */
+    function Socket(node) {
 
         // ## Private properties
 
@@ -13464,11 +13497,27 @@ if (!JSON) {
          *
          * Socket connection established.
          *
+         * @see Socket.connecting
          * @see Socket.isConnected
          * @see Socket.onConnect
          * @see Socket.onDisconnect
          */
         this.connected = false;
+
+         /**
+         * ### Socket.connecting
+         *
+         * Socket connection being established
+         *
+         * TODO see whether we should merge connected / connecting
+         * in one variable with socket states.
+         *
+         * @see Socket.connected
+         * @see Socket.isConnected
+         * @see Socket.onConnect
+         * @see Socket.onDisconnect
+         */
+        this.connecting = false;
 
         /**
          * ### Socket.url
@@ -13480,6 +13529,8 @@ if (!JSON) {
          */
         this.url = null;
 
+        // Experimental Journal.
+        // TODO: check if we need it.
 
         this.journalOn = false;
 
@@ -13503,6 +13554,7 @@ if (!JSON) {
                 }
             });
         }
+        // End Experimental Code.
 
         /**
          * ### Socket.node
@@ -13517,7 +13569,7 @@ if (!JSON) {
     /**
      * ### Socket.setup
      *
-     * Configure the socket.
+     * Configures the socket
      *
      * @param {object} options Optional. Configuration options.
      * @see node.setup.socket
@@ -13536,7 +13588,7 @@ if (!JSON) {
     /**
      * ### Socket.setSocketType
      *
-     * Set the default socket by requesting it to the Socket Factory.
+     * Sets the default socket by requesting it to the Socket Factory
      *
      * Supported types: 'Direct', 'SocketIo'.
      *
@@ -13553,35 +13605,65 @@ if (!JSON) {
     /**
      * ### Socket.connect
      *
-     * Calls the connect method on the actual socket object.
+     * Calls the connect method on the actual socket object
      *
-     * @param {string} uri The uri to which to connect.
+     * Uri is usually empty when using SocketDirect.
+     *
+     * @param {string} uri Optional. The uri to which to connect.
      * @param {object} options Optional. Configuration options for the socket.
      */
     Socket.prototype.connect = function(uri, options) {
-        var humanReadableUri = uri || 'local server';
-        if (!this.socket) {
-            this.node.err('Socket.connet: cannot connet to ' +
-                          humanReadableUri + ' . No socket defined.');
-            return false;
+        var humanReadableUri;
+
+        if (uri && 'string' !== typeof uri) {
+            throw new TypeError('Socket.connect: uri must be string or ' +
+                                'undefined.');
+        }
+        if (options && 'object' !== typeof options) {
+            throw new TypeError('Socket.connect: options must be object or ' +
+                                'undefined.');
+        }
+        if (this.connected) {
+            throw new Error('Socket.connect: socket is already connected. ' +
+                            'Only one connection is allowed.');
+        }
+        if (this.connecting) {
+            throw new Error('Socket.connecting: one connection attempt is ' +
+                            'already in progress. Please try again later.');
         }
 
+        humanReadableUri = uri || 'local server';
+
+        if (!this.socket) {
+            throw new Error('Socket.connet: cannot connet to ' +
+                            humanReadableUri + ' . No socket defined.');
+        }
+        this.connecting = true;
         this.url = uri;
         this.node.log('connecting to ' + humanReadableUri + '.');
-
-        this.socket.connect(uri, 'undefined' !== typeof options ?
-                            options : this.userOptions);
+        this.socket.connect(uri, options || this.userOptions);
     };
+
+    /**
+     * ### Socket.disconnect
+     *
+     * Calls the disconnect method on the actual socket object
+     */
+    Socket.prototype.disconnect = function() {
+        this.socket.disconnect();
+    };
+
 
     /**
      * ### Socket.onConnect
      *
-     * Handler for connections to the server.
+     * Handler for connections to the server
      *
      * @emit SOCKET_CONNECT
      */
     Socket.prototype.onConnect = function() {
         this.connected = true;
+        this.connecting = false;
         this.node.emit('SOCKET_CONNECT');
         this.node.log('socket connected.');
     };
@@ -13589,7 +13671,7 @@ if (!JSON) {
     /**
      * ### Socket.onDisconnect
      *
-     * Handler for disconnections from the server.
+     * Handler for disconnections from the server
      *
      * Clears the player and monitor lists.
      *
@@ -13597,6 +13679,7 @@ if (!JSON) {
      */
     Socket.prototype.onDisconnect = function() {
         this.connected = false;
+        this.conecting = false;
         node.emit('SOCKET_DISCONNECT');
         // Save the current stage of the game
         //this.node.session.store();
@@ -13605,6 +13688,7 @@ if (!JSON) {
         this.node.game.pl.clear(true);
         this.node.game.ml.clear(true);
 
+        console.log('AAAAAAAAAA');
         this.node.log('socket closed.');
     };
 
@@ -13642,18 +13726,16 @@ if (!JSON) {
      */
     Socket.prototype.validateIncomingMsg = function(gameMsg) {
         if (this.session && gameMsg.session !== this.session) {
-            console.log(this.session, gameMsg.session);
-            console.log(gameMsg);
             return logSecureParseError.call(this, 'mismatched session in ' +
                                             'incoming message.');
         }
         return gameMsg;
-    }
+    };
 
     /**
      * ### Socket.onMessage
      *
-     * Initial handler for incoming messages from the server.
+     * Initial handler for incoming messages from the server
      *
      * This handler will be replaced by the FULL handler, upon receiving
      * a HI message from the server.
@@ -13689,7 +13771,7 @@ if (!JSON) {
     /**
      * ### Socket.onMessageFull
      *
-     * Full handler for incoming messages from the server.
+     * Full handler for incoming messages from the server
      *
      * All parsed messages are either emitted immediately or buffered,
      * if the game is not ready, and the message priority is low.x
@@ -13870,7 +13952,7 @@ if (!JSON) {
     /**
      * ### Socket.send
      *
-     * Pushes a message into the socket.
+     * Pushes a message into the socket
      *
      * The msg is actually received by the client itself as well.
      *
@@ -13948,12 +14030,36 @@ if (!JSON) {
     var GameMsg = node.GameMsg,
         Player = node.Player,
         MessagingQueue = node.MessagingQueue,
-        constants = node.constants;
+        constants = node.constants,
+        J = node.JSUS;
 
     exports.SocketIo = SocketIo;
 
+    /**
+     * ## SocketIo constructor
+     *
+     * Creates a new instance of SocketIo
+     *
+     * @param {NodeGameClient} node Reference to the node instance
+     * @param {object} options Optional argument to override default settings
+     * @constructor
+     */
     function SocketIo(node, options) {
+
+        // ## Private properties
+
+        /**
+         * ### SocketIo.node
+         *
+         * Reference to the node object.
+         */
         this.node = node;
+
+        /**
+         * ### Socket.socket
+         *
+         * Reference to the actual socket-io socket created on connection
+         */
         this.socket = null;
         this.messagingQueue = new MessagingQueue();
         this.reliableMessaging =
@@ -13965,15 +14071,28 @@ if (!JSON) {
                 options.reliableRetryInterval : constants.reliableRetryInterval;
     }
 
+    /**
+     * ### SocketIo.connect
+     *
+     * Establishes a socket-io connection with a server
+     *
+     * Sets the on: 'connect', 'message', 'disconnect' event listeners.
+     *
+     * @param {string} url The address of the server channel
+     * @param {object} options Optional. Configuration options
+     */
     SocketIo.prototype.connect = function(url, options) {
         var node, socket, that;
         that = this;
         node = this.node;
 
-        if (!url) {
-            node.err('cannot connect to empty url.', 'ERR');
-            return false;
+        if ('string' !== typeof url) {
+            throw TypeError('SocketIO.connect: url must be string.');
         }
+
+        // See https://github.com/Automattic/socket.io-client/issues/251
+        J.mixin(options, { 'force new connection': true });
+
         socket = io.connect(url, options); //conf.io
 
         socket.on('connect', function(msg) {
@@ -14008,15 +14127,38 @@ if (!JSON) {
         this.socket = socket;
 
         return true;
-
     };
 
+    /**
+     * ### SocketIo.disconnect
+     *
+     * Triggers the disconnection from a server
+     */
+    SocketIo.prototype.disconnect = function() {
+        this.socket.disconnect();
+    };
+
+    /**
+     * ### SocketIo.isConnected
+     *
+     * Returns TRUE, if currently connected
+     */
     SocketIo.prototype.isConnected = function() {
         return this.socket &&
             this.socket.socket &&
             this.socket.socket.connected;
     };
 
+    /**
+     * ### SocketIo.send
+     *
+     * Stringifies and send a message through the socket-io socket
+     *
+     * @param {object} msg Object implementing a stringiy method. Usually,
+     *    a game message.
+     *
+     * @see GameMessage
+     */
     SocketIo.prototype.send = function(msg) {
         var that = this;
         if (msg.reliable) {
@@ -14624,9 +14766,14 @@ if (!JSON) {
             throw new Error('Game.start: game cannot be started.');
         }
 
+        // Starts from beginning (default) or from a predefined stage
+        // This options is useful when a player reconnets.
+        startStage = options.startStage || new GameStage();
+
         // INIT the game.
         if (this.plot && this.plot.stager) {
             onInit = this.plot.stager.getOnInit();
+            this.globals = this.plot.getGlobals(startStage);
             if (onInit) {
                 this.setStateLevel(constants.stateLevels.INITIALIZING);
                 node.emit('INIT');
@@ -14634,10 +14781,6 @@ if (!JSON) {
             }
         }
         this.setStateLevel(constants.stateLevels.INITIALIZED);
-
-        // Starts from beginning (default) or from a predefined stage
-        // This options is useful when a player reconnets.
-        startStage = options.startStage || new GameStage();
 
         this.setCurrentGameStage(startStage, true);
 
@@ -14757,7 +14900,7 @@ if (!JSON) {
      *
      * Experimental. Sets the game to pause
      *
-     * @TODO: check with Game.ready
+     * TODO: check with Game.ready
      */
     Game.prototype.pause = function() {
         var msgHandler, node;
@@ -14796,7 +14939,7 @@ if (!JSON) {
      *
      * Experimental. Resumes the game from a pause
      *
-     * @TODO: check with Game.ready
+     * TODO: check with Game.ready
      */
     Game.prototype.resume = function() {
         var msgHandler, node;
@@ -14964,7 +15107,7 @@ if (!JSON) {
             return null;
         }
         else {
-            // TODO maybe update also in case of string
+            // TODO maybe update also in case of string.
 
             node.emit('STEPPING');
 
@@ -22047,10 +22190,15 @@ if (!JSON) {
         if (!iframe) {
             throw new Error('GameWindow.clearFrame: cannot detect frame.');
         }
+
         frameName = iframe.name || iframe.id;
         iframe.onload = null;
+
         // Method .replace does not add the uri to the history.
-        iframe.contentWindow.location.replace('about:blank');
+        //iframe.contentWindow.location.replace('about:blank');
+
+        this.getFrameDocument().documentElement.innerHTML = '';
+
         this.frameElement = iframe;
         this.frameWindow = window.frames[frameName];
         this.frameDocument = W.getIFrameDocument(iframe);
@@ -22613,7 +22761,7 @@ if (!JSON) {
      * Warning: Security policies may block this method if the content is
      * coming from another domain.
      * Notice: If called multiple times within the same stage/step, it will
-     * the `VisualTimer` widget to reload the timer.
+     * cause the `VisualTimer` widget to reload the timer.
      *
      * @param {string} uri The uri to load
      * @param {function} func Optional. The function to call once the DOM is
@@ -22765,7 +22913,7 @@ if (!JSON) {
             // would be cleared once the iframe becomes ready.  In that case,
             // iframe.onload handles the filling of the contents.
             if (frameReady) {
-                // Handles chaching.
+                // Handles caching.
                 handleFrameLoad(this, uri, iframe, iframeName, loadCache,
                                 storeCacheNow);
 
@@ -22957,8 +23105,7 @@ if (!JSON) {
      *
      * Injects scripts into the iframe
      *
-     * First removes all old injected script tags.
-     * Then injects `<script class="injectedlib" src="...">` lines into given
+     * Inserts `<script class="injectedlib" src="...">` lines into given
      * iframe object, one for every given library.
      *
      * @param {HTMLIFrameElement} iframe The target iframe
@@ -23018,7 +23165,8 @@ if (!JSON) {
      * The frame element must exists or an error will be thrown.
      *
      * @param {GameWindow} W The current GameWindow object
-     * @param {string} W Optional. The previous position of the header
+     * @param {string} oldHeaderPos Optional. The previous position of the
+     *   header
      *
      * @api private
      */
