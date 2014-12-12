@@ -8682,7 +8682,7 @@ if (!JSON) {
      *
      * @type {number}
      */
-    k.reliableRetryInterval = 30000;
+    k.reliableRetryInterval = 4000;
 
 })('undefined' != typeof node ? node : module.exports);
 
@@ -10740,16 +10740,6 @@ if (!JSON) {
          * E.g. between nodeGame servers
          */
         this.forward = 0;
-
-        /**
-         * ### GameMsg.intervalID
-         *
-         * Only used when reliable messaging is active.
-         * Is used to disable the retry logic for this message.
-         *
-         * @type {number}
-         */
-        this.intervalID = 0;
     }
 
     /**
@@ -13192,7 +13182,7 @@ if (!JSON) {
      * @see GameMsg
      */
     GameMsgGenerator.prototype.create = function(msg) {
-        var gameStage, priority, node;
+        var gameStage, priority, node, reliable;
         node = this.node;
 
         if (msg.stage) {
@@ -13203,21 +13193,18 @@ if (!JSON) {
                 node.game.getCurrentGameStage(): new GameStage('0.0.0');
         }
 
-        if ('undefined' !== typeof msg.priority) {
-            priority = msg.priority;
-        }
-        else if (msg.target === constants.target.GAMECOMMAND ||
-                 msg.target === constants.target.REDIRECT ||
-                 msg.target === constants.target.PCONNECT ||
-                 msg.target === constants.target.PDISCONNECT ||
-                 msg.target === constants.target.PRECONNECT ||
-                 msg.target === constants.target.SETUP) {
+        priority = ('undefined' !== typeof msg.priority)
+            ? msg.priority
+            : (msg.target === constants.target.GAMECOMMAND ||
+               msg.target === constants.target.REDIRECT ||
+               msg.target === constants.target.PCONNECT ||
+               msg.target === constants.target.PDISCONNECT ||
+               msg.target === constants.target.PRECONNECT ||
+               msg.target === constants.target.SETUP);
 
-            priority = 1;
-        }
-        else {
-            priority = 0;
-        }
+        reliable = ('undefined' !== typeof msg.reliable)
+            ? msg.reliable
+            : priority;
 
         return new GameMsg({
             session: 'undefined' !== typeof msg.session ?
@@ -13230,9 +13217,8 @@ if (!JSON) {
             text: 'undefined' !== typeof msg.text ? "" + msg.text : null,
             data: 'undefined' !== typeof msg.data ? msg.data : null,
             priority: priority,
-            reliable: msg.reliable && node.socket.socket.reliableMessaging
-    });
-
+            reliable: reliable && node.socket.socket.reliableMessaging
+        });
     };
 
     // ## Closure
@@ -13315,11 +13301,21 @@ if (!JSON) {
     }
 
     MessagingQueue.prototype.deleteMessageWithInterval = function (msgId) {
-        var intId = this.msgIntQueue.selexec('msgId', '=', msgId)
-            .fetch().intId;
+        var result = this.msgIntQueue.selexec('msgId', '=', msgId)
+            .fetch();
 
-        clearInterval(intId);
+        if (result.length == 0) {
+            console.log('MessagingQueue.deleteMessageWithInterval: ' +
+            'Tried to delete non-existant Message');
+            return false;
+        }
+
+        for (var i = 0; i < result.length; ++i) {
+            clearInterval(result[i].intId);
+        }
+
         this.msgIntQueue['msgIdIdx'].remove(msgId);
+        return true;
     }
 
     MessagingQueue.prototype.getAllMessagesForClient = function (clientId) {
@@ -14102,8 +14098,7 @@ if (!JSON) {
                 msg = node.socket.secureParse(msg);
                 if (msg) {
                     if (msg.target === constants.target.ACK) {
-                        that.messagingQueue.deleteMessageWithInterval(msg.id);
-                        return;
+                        return that.messagingQueue.deleteMessageWithInterval(msg.text);
                     }
                     else if (msg.reliable) {
                         // send ACK
@@ -14161,9 +14156,9 @@ if (!JSON) {
      */
     SocketIo.prototype.send = function(msg) {
         var that = this;
-        if (msg.reliable) {
+        if (msg.reliable && msg.target !== constants.target.ACK) {
             this.messagingQueue.addMessageWithInterval(msg,
-                function() {that.socket.send(msg.stringify())},
+                function() {console.log("CLIENT_INTERVAL"); that.socket.send(msg.stringify())},
                 that.reliableRetryInterval);
         }
 
