@@ -72,7 +72,7 @@ function configure(servernode) {
 
     // Time interval in milliseconds between two consecutive tries of sending
     // reliable messages.
-    servernode.reliableRetryInterval = 30000;
+    servernode.reliableRetryInterval = 3000;
 
     // 2. Channels configuration.
 
