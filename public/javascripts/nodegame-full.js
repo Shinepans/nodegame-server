@@ -4851,13 +4851,7 @@ if (!JSON) {
  *
  * NDDB is a powerful and versatile object database for node.js and the browser.
  *
- * TODO: When using index.update() and the update is suppose to remove the element
- * from view and hashes, for example becausea property is deleted. index.update()
- * fails doing so. Should be fixed. At the moment the only solution seems to
- * reintroduce a global index for all items and to use that to quickly lookup items
- * in views and hashes.
- *
- * See README.md for help.
+ * See README.md for documentation and help.
  * ---
  */
 (function(exports, J, store) {
@@ -4871,6 +4865,7 @@ if (!JSON) {
      * Removes cyclic references from an object
      *
      * @param {object} e The object to decycle
+     *
      * @return {object} e The decycled object
      *
      * @see https://github.com/douglascrockford/JSON-js/
@@ -4888,6 +4883,7 @@ if (!JSON) {
      * Restores cyclic references in an object previously decycled
      *
      * @param {object} e The object to retrocycle
+     *
      * @return {object} e The retrocycled object
      *
      * @see https://github.com/douglascrockford/JSON-js/
@@ -4912,20 +4908,35 @@ if (!JSON) {
         that = this;
         options = options || {};
 
-        if (!J) throw new Error('JSUS not found.');
+        if (!J) this.throwErr('Error', 'constructor', 'JSUS not found');
 
         // ## Public properties.
+
+        // ### nddbid
+        // A global index of all objects
+        this.nddbid = new NDDBIndex('nddbid', this);
 
         // ### db
         // The default database.
         this.db = [];
+
+        // ### lastSelection
+        // The subset of items that were selected during the last operations
+        // Notice: some of the items might not exist any more in the database.
+        // @see NDDB.fetch
+        this.lastSelection = [];
+
+        // ### nddbid
+        // A global index of all hashed objects
+        // @see NDDBHashtray
+        this.hashtray = new NDDBHashtray();
 
         // ###tags
         // The tags list.
         this.tags = {};
 
         // ### hooks
-        // The list of hooks and associated callbacks.
+        // The list of hooks and associated callbacks
         this.hooks = {
             insert: [],
             remove: [],
@@ -4933,11 +4944,12 @@ if (!JSON) {
         };
 
         // ### nddb_pointer
-        // Pointer for iterating along all the elements.
+        // Pointer for iterating along all the elements
         this.nddb_pointer = 0;
 
         // ### query
-        // QueryBuilder obj.
+        // QueryBuilder obj
+        // @see QueryBuilder
         this.query = new QueryBuilder();
 
         // ### filters
@@ -4945,53 +4957,53 @@ if (!JSON) {
         this.addDefaultFilters();
 
         // ### __C
-        // List of comparator functions.
+        // List of comparator functions
         this.__C = {};
 
         // ### __H
-        // List of hash functions.
+        // List of hash functions
         this.__H = {};
 
         // ### __I
-        // List of index functions.
+        // List of index functions
         this.__I = {};
 
         // ### __I
-        // List of view functions.
+        // List of view functions
         this.__V = {};
 
         // ### __update
-        // Auto update options container.
+        // Auto update options container
         this.__update = {};
 
         // ### __update.pointer
-        // If TRUE, nddb_pointer always points to the last insert.
+        // If TRUE, nddb_pointer always points to the last insert
         this.__update.pointer = false;
 
         // ### __update.indexes
-        // If TRUE, rebuild indexes on every insert and remove.
+        // If TRUE, rebuild indexes on every insert and remove
         this.__update.indexes = false;
 
         // ### __update.sort
-        // If TRUE, sort db on every insert and remove.
+        // If TRUE, sort db on every insert and remove
         this.__update.sort = false;
 
         // ### __shared
-        // Objects inserted here will be shared (and not cloned)
-        // among all breeded NDDB instances.
+        // Objects shared (not cloned) among breeded NDDB instances
         this.__shared = {};
 
         // ### log
-        // Std out. Can be overriden in options by another function.
-        // The function will be executed with this instance of PlayerList
-        // as context, so if it is a method of another class it might not
-        // work. In case you will need to inherit or add properties
-        // and methods from the other class into this PlayerList instance.
+        // Std out for log messages
+        //
+        // It can be overriden in options by another function (`options.log`).
+        // `options.logCtx` specif the context of execution.
+        // @see NDDB.initLog
         this.log = console.log;
 
         // ### globalCompare
-        // Dummy compare function used to sort elements in the database.
-        // Override with a compare function returning:
+        // Dummy compare function used to sort elements in the database
+        //
+        // It can be overriden with a compare function returning:
         //
         //  - 0 if the objects are the same
         //  - a positive number if o2 precedes o1
@@ -5001,24 +5013,22 @@ if (!JSON) {
             return -1;
         };
 
-        // TODO see where placing
-        var that;
-        that = this;
-        // TODO: maybe give users the option to overwrite it.
-        // Adding the compareInAllFields function
-       this.comparator('*', function(o1, o2, trigger1, trigger2) {
-           var d, c, res;
-           for (d in o1) {
+        // Adding the "compareInAllFields" function.
+        //
+        // @see NDDB.comparator
+        this.comparator('*', function(o1, o2, trigger1, trigger2) {
+            var d, c, res;
+            for (d in o1) {
                c = that.getComparator(d);
                o2[d] = o2['*'];
                res = c(o1, o2);
                if (res === trigger1) return res;
                if ('undefined' !== trigger2 && res === trigger2) return res;
                // No need to delete o2[d] afer comparison.
-           }
+            }
 
            // We are not interested in sorting.
-           // Figuring out the right return value
+           // Figuring out the right return value.
            if (trigger1 === 0) {
                return trigger2 === 1 ? -1 : 1;
            }
@@ -5027,7 +5037,6 @@ if (!JSON) {
            }
 
            return trigger2 === 0 ? 1 : 0;
-
        });
 
         // Mixing in user options and defaults.
@@ -5039,8 +5048,7 @@ if (!JSON) {
         }
     };
 
-
-      /**
+    /**
      * ### NDDB.addFilter
      *
      * Registers a _select_ function under an alphanumeric id
@@ -5072,6 +5080,22 @@ if (!JSON) {
      * ### NDDB.registerDefaultFilters
      *
      * Register default filters for NDDB
+     *
+     * Default filters include standard logical operators:
+     *
+     *   - '=', '==', '!=', ''>', >=', '<', '<=',
+     *
+     * and:
+     *
+     *   - 'E': field exists (can be omitted, it is the default one)
+     *   - '><': between values
+     *   - '<>': not between values
+     *   - 'in': element is found in array
+     *   - '!in': element is noi found in array
+     *   - 'LIKE': string SQL LIKE (case sensitive)
+     *   - 'iLIKE': string SQL LIKE (case insensitive)
+     *
+     * @see NDDB.filters
      */
     NDDB.prototype.addDefaultFilters = function() {
         if (!this.filters) this.filters = {};
@@ -5255,7 +5279,6 @@ if (!JSON) {
         this.filters['in'] = function(d, value, comparator) {
             if ('object' === typeof d) {
                 return function(elem) {
-                    debugger
                     var i, len;
                     len = value.length;
                     for (i = 0; i < len; i++) {
@@ -5368,8 +5391,31 @@ if (!JSON) {
 
     };
 
-
     // ## METHODS
+
+    /**
+     * ## NDDB.throwErr
+     *
+     * Throws an error with a predefined format
+     *
+     * The format is "constructor name" . "method name" : "error text" .
+     *
+     * It does **not** perform type checking on itw own input parameters.
+     *
+     * @param {string} type Optional. The error type, e.g. 'TypeError'.
+     *   Default, 'Error'
+     * @param {string} method Optional. The name of the method
+     * @param {string} text Optional. The error text. Default, 'generic error'
+     */
+    NDDB.prototype.throwErr = function(type, method, text) {
+        var errMsg, miss;
+        text = text || 'generic error';
+        errMsg = this._getConstrName();
+        if (method) errMsg = errMsg + '.' + method;
+        errMsg = errMsg + ': ' + text + '.';
+        if (type === 'TypeError') throw new TypeError(errMsg);
+        throw new Error(errMg);
+    };
 
     /**
      * ### NDDB.init
@@ -5382,27 +5428,48 @@ if (!JSON) {
      */
     NDDB.prototype.init = function(options) {
         var filter, sh, i;
+        var errMsg;
         options = options || {};
 
         this.__options = options;
 
         if (options.tags) {
+            if ('object' !== typeof options.tags) {
+                errMsg = 'options.tag must be object or undefined';
+                this.throwErr('TypeError', 'init', errMsg);
+            }
             this.tags = options.tags;
         }
 
-        if (options.nddb_pointer > 0) {
+        if ('undefined' !== typeof options.nddb_pointer) {
+            if ('number' !== typeof options.nddb_pointer) {
+                errMsg = 'options.nddb_pointer must be number or undefined';
+                this.throwErr('TypeError', 'init', errMsg);
+            }
             this.nddb_pointer = options.nddb_pointer;
         }
 
         if (options.hooks) {
+            if ('object' !== typeof options.hooks) {
+                errMsg = 'options.hooks must be object or undefined';
+                this.throwErr('TypeError', 'init', errMsg);
+            }
             this.hooks = options.hooks;
         }
 
         if (options.globalCompare) {
+            if ('function' !== typeof options.globalCompare) {
+                errMsg = 'options.globalCompare must be function or undefined';
+                this.throwErr('TypeError', 'init', errMsg);
+            }
             this.globalCompare = options.globalCompare;
         }
 
         if (options.update) {
+            if ('object' !== typeof options.update) {
+                errMsg = 'options.update must be object or undefined';
+                this.throwErr('TypeError', 'init', errMsg);
+            }
             if ('undefined' !== typeof options.update.pointer) {
                 this.__update.pointer = options.update.pointer;
             }
@@ -5417,6 +5484,10 @@ if (!JSON) {
         }
 
         if ('object' === typeof options.filters) {
+            if ('object' !== typeof options.filters) {
+                errMsg = 'options.filters must be object or undefined';
+                this.throwErr('TypeError', 'init', errMsg);
+            }
             for (filter in options.filters) {
                 this.addFilter(filter, options.filters[filter]);
             }
@@ -5437,10 +5508,18 @@ if (!JSON) {
         }
 
         if (options.C) {
+            if ('object' !== typeof options.C) {
+                errMsg = 'options.C must be object or undefined';
+                this.throwErr('TypeError', 'init', errMsg);
+            }
             this.__C = options.C;
         }
 
         if (options.H) {
+            if ('object' !== typeof options.H) {
+                errMsg = 'options.H must be object or undefined';
+                this.throwErr('TypeError', 'init', errMsg);
+            }
             for (i in options.H) {
                 if (options.H.hasOwnProperty(i)) {
                     this.hash(i, options.H[i]);
@@ -5449,6 +5528,10 @@ if (!JSON) {
         }
 
         if (options.I) {
+            if ('object' !== typeof options.I) {
+                errMsg = 'options.I must be object or undefined';
+                this.throwErr('TypeError', 'init', errMsg);
+            }
             this.__I = options.I;
             for (i in options.I) {
                 if (options.I.hasOwnProperty(i)) {
@@ -5460,6 +5543,10 @@ if (!JSON) {
         // all the previous settings (the method would also pollute
         // this.__options if called before all options in init are set).
         if (options.V) {
+            if ('object' !== typeof options.V) {
+                errMsg = 'options.V must be object or undefined';
+                this.throwErr('TypeError', 'init', errMsg);
+            }
             this.__V = options.V;
             for (i in options.V) {
                 if (options.V.hasOwnProperty(i)) {
@@ -5478,14 +5565,21 @@ if (!JSON) {
      * @param {object} ctx Optional. The context of the log function
      */
     NDDB.prototype.initLog = function(cb, ctx) {
+        if ('function' !== typeof cb) {
+            this.throwErr('TypeError', 'initLog', 'cb must be function');
+        }
         ctx = ctx || this;
+        if ('function' !== typeof ctx && 'object' !== typeof ctx) {
+            this.throwErr('TypeError', 'initLog', 'ctx must be object or ' +
+                          'function');
+        }
         this.log = function(){
             return cb.apply(ctx, arguments);
         };
     }
 
     /**
-     * ## NDDB._getConstrName
+     * ### NDDB._getConstrName
      *
      * Returns 'NDDB' or the name of the inheriting class.
      */
@@ -5499,12 +5593,14 @@ if (!JSON) {
     /**
      * ### NDDB._autoUpdate
      *
-     * Performs a series of automatic checkings
-     * and updates the db according to current
-     * configuration
+     * Performs a series of automatic checkings and updates the db
+     *
+     * Checkings are performed according to current configuration, or to
+     * local options.
+     *
+     * @param {object} options Optional. Configuration object
      *
      * @api private
-     * @param {object} options Optional. Configuration object
      */
     NDDB.prototype._autoUpdate = function(options) {
         var update = options ? J.merge(this.__update, options) : this.__update;
@@ -5522,40 +5618,58 @@ if (!JSON) {
     };
 
 
+    /**
+     * ## .nddb_insert
+     *
+     * Insert an item into db and performs update operations
+     *
+     * A new property `.nddbid` is created in the object, and it will be
+     * used to add the element into the global index: `NDDB.nddbid`.
+     *
+     * Emits the 'insert' event, and updates indexes, hashes and views
+     * accordingly.
+     *
+     * @param {object|function} o The item to add to database
+     * @param {boolean} update Optional. If TRUE, updates indexes, hashes,
+     *    and views. Default, FALSE
+     *
+     * @see NDDB.nddbid
+     * @see NDDB.emit
+     *
+     * @api private
+     */
     function nddb_insert(o, update) {
-        if (o === null) return;
-        var type = typeof(o);
-        if (type === 'undefined') return;
-        if (type === 'string') return;
-        if (type === 'number') return;
-        this.emit('insert', o);
+        var nddbid;
+        if (('object' !== typeof o) && ('function' !== typeof o)) {
+            this.throwErr('TypeError', 'insert', 'object or function expected ' +
+                          typeof o + ' received.');
+        }
+
+        // Check / create a global index.
+        if ('undefined' === typeof o._nddbid) {
+            // Create internal idx.
+            nddbid = J.uniqueKey(this.nddbid.resolve);
+            if (!nddbid) {
+                this.throwErr('Error', 'insert', 'failed to create index: ' + o);
+            }
+            if (Object.defineProperty) {
+                Object.defineProperty(o, '_nddbid', { value: nddbid });
+            }
+            else {
+                o._nddbid = nddbid;
+            }
+        }
+        // Add to index directly (bypass api).
+        this.nddbid.resolve[o._nddbid] = this.db.length;
+        // End create index.
         this.db.push(o);
+        this.emit('insert', o);
         if (update) {
             this._indexIt(o, (this.db.length-1));
             this._hashIt(o);
             this._viewIt(o);
         }
     }
-
-    // TODO: To test
-    //    function nddb_insert(o, update) {
-    //        if (o === null) {
-    //            throw new TypeError(this._getConstrName() +
-    //                     '.insert: null received.');
-    //        }
-    //        if (('object' !== typeof o) && ('function' !== typeof o)) {
-    //            throw new TypeError(this._getConstrName() +
-    //                                '.insert: expects object or function, ' +
-    //                                typeof o + ' received.');
-    //        }
-    //        this.db.push(o);
-    //        this.emit('insert', o);
-    //        if (update) {
-    //            this._indexIt(o, (this.db.length-1));
-    //            this._hashIt(o);
-    //            this._viewIt(o);
-    //        }
-    //    }
 
     /**
      * ### NDDB.importDB
@@ -5567,8 +5681,7 @@ if (!JSON) {
     NDDB.prototype.importDB = function(db) {
         var i;
         if (!J.isArray(db)) {
-            throw new TypeError(this._getConstrName() +
-                                '.importDB expects an array.');
+            this.throwErr('TypeError', 'importDB', 'db must be array');
         }
         for (i = 0; i < db.length; i++) {
             nddb_insert.call(this, db[i], this.__update.indexes);
@@ -5603,28 +5716,37 @@ if (!JSON) {
      *
      * Returns the number of elements in the database
      *
-     * @see NDDB.length
+     * It always returns the length of the full database, regardless of
+     * current selection.
+     *
+     * @return {number} The length of the database
+     *
+     * @see NDDB.count
      */
     NDDB.prototype.size = function() {
         return this.db.length;
     };
-
 
     /**
      * ### NDDB.breed
      *
      * Creates a clone of the current NDDB object
      *
-     * Takes care of calling the actual constructor
-     * of the class, so that inheriting objects will
-     * preserve their prototype.
+     * Takes care of calling the actual constructor of the class,
+     * so that inheriting objects will preserve their prototype.
      *
-     * @param {array} db Array of items to import in the new database
-     * @return {NDDB} The new database
+     * @param {array} db Optional. Array of items to import in the new database.
+     *   Default, items currently in the database
+     *
+     * @return {NDDB|object} The new database
      */
     NDDB.prototype.breed = function(db) {
-        //In case the class was inherited
-        return new this.constructor(this.cloneSettings(), db || this.db);
+        if (db && !J.isArray(db)) {
+            this.throwErr('TypeError', 'importDB', 'db must be array ' +
+                          'or undefined');
+        }
+        // In case the class was inherited.
+        return new this.constructor(this.cloneSettings(), db || this.fetch());
     };
 
     /**
@@ -5649,6 +5771,7 @@ if (!JSON) {
      *
      * @param {object} leaveOut Optional. An object containing the name of
      *   the properties to leave out of the clone as keys.
+     *
      * @return {object} options A copy of the current settings
      *   plus the shared objects
      */
@@ -5732,6 +5855,7 @@ if (!JSON) {
      * Cyclic objects are decycled.
      *
      * @param {boolean} TRUE, if compressed
+     *
      * @return {string} out A machine-readable representation of the database
      *
      * @see JSUS.stringify
@@ -5766,20 +5890,16 @@ if (!JSON) {
      *
      * @param {string} d The name of the dimension
      * @param {function} comparator The comparator function
-     * @return {boolean} TRUE, if registration was successful
-     *
      */
     NDDB.prototype.comparator = function(d, comparator) {
-        if ('undefined' === typeof d) {
-            throw new TypeError(this._getConstrName() +
-                                '.comparator: undefined dimension.');
+        if ('string' !== typeof d) {
+            this.throwErr('TypeError', 'comparator', 'd must be string');
         }
         if ('function' !== typeof comparator) {
-            throw new TypeError(this._getConstrName() +
-                                '.comparator: comparator must be function.');
+            this.throwErr('TypeError', 'comparator', 'comparator ' +
+                          'must be function');
         }
         this.__C[d] = comparator;
-        return true;
     };
 
     // ### NDDB.c
@@ -5840,9 +5960,13 @@ if (!JSON) {
                     if ('undefined' === typeof v2) return -1;
                     if (v1 > v2) return 1;
                     if (v2 > v1) return -1;
+                    
+                    // In case v1 and v2 are of different types
+                    // they might not be equal here.
+                    if (v2 === v1) return 0;
 
-
-                    return 0;
+                    // Return 1 if everything else fails.
+                    return 1;
                 };
             }
         }
@@ -5866,7 +5990,9 @@ if (!JSON) {
                         obj[i] = o2;
                         res = comparators[i](o1, obj);
                         if (res === trigger1) return res;
-                        if ('undefined' !== trigger2 && res === trigger2) return res;
+                        if ('undefined' !== trigger2 && res === trigger2) {
+                            return res;
+                        }
                     }
                 }
                 // We are not interested in sorting.
@@ -5888,10 +6014,13 @@ if (!JSON) {
     /**
      * ### NDDB.isReservedWord
      *
-     * Returns TRUE if a property or a method with the same name
-     * already exists in the current instance od NDDB
+     * Returns TRUE if a key is a reserved word
+     *
+     * A word is reserved if a property or a method with
+     * the same name already exists in the current instance
      *
      * @param {string} key The name of the property
+     *
      * @return {boolean} TRUE, if the property exists
      */
     NDDB.prototype.isReservedWord = function(key) {
@@ -5915,27 +6044,21 @@ if (!JSON) {
      *
      * @param {string} idx The name of index
      * @param {function} func The hashing function
-     * @return {boolean} TRUE, if registration was successful
      *
      * @see NDDB.isReservedWord
      * @see NDDB.rebuildIndexes
-     *
      */
     NDDB.prototype.index = function(idx, func) {
         if (('string' !== typeof idx) && ('number' !== typeof idx)) {
-            throw new TypeError(this._getConstrName() + '.index: ' +
-                                'idx must be string or number.');
+            this.throwErr('TypeError', 'index', 'idx must be string or number');
         }
         if (this.isReservedWord(idx)) {
-            throw new Error(this._getConstrName() + '.index: ' +
-                            'idx is reserved word (' + idx + ')');
+            this.throwErr('TypeError', 'index', 'idx is reserved word: ' + idx);
         }
         if ('function' !== typeof func) {
-            throw new TypeError(this._getConstrName() + '.view: ' +
-                                'func must be function.');
+            this.throwErr('TypeError', 'index', 'func must be function');
         }
         this.__I[idx] = func, this[idx] = new NDDBIndex(idx, this);
-        return true;
     };
 
 
@@ -5957,7 +6080,6 @@ if (!JSON) {
      *
      * @param {string} idx The name of index
      * @param {function} func The hashing function
-     * @return {boolean} TRUE, if registration was successful
      *
      * @see NDDB.hash
      * @see NDDB.isReservedWord
@@ -5966,23 +6088,18 @@ if (!JSON) {
     NDDB.prototype.view = function(idx, func) {
         var settings;
         if (('string' !== typeof idx) && ('number' !== typeof idx)) {
-            throw new TypeError(this._getConstrName() + '.view: ' +
-                                'idx must be string or number.');
+            this.throwErr('TypeError', 'view', 'idx must be string or number');
         }
         if (this.isReservedWord(idx)) {
-            throw new Error(this._getConstrName() + '.view: ' +
-                            'idx is reserved word (' + idx + ')');
+            this.throwErr('TypeError', 'view', 'idx is reserved word: ' + idx);
         }
         if ('function' !== typeof func) {
-            throw new TypeError(this._getConstrName() + '.view: ' +
-                                'func must be function.');
+            this.throwErr('TypeError', 'view', 'func must be function');
         }
-
         // Create a copy of the current settings, without the views
         // functions, else we create an infinite loop in the constructor.
-        settings = this.cloneSettings({V: ''});
+        settings = this.cloneSettings( {V: ''} );
         this.__V[idx] = func, this[idx] = new NDDB(settings);
-        return true;
     };
 
     /**
@@ -6001,28 +6118,22 @@ if (!JSON) {
      *
      * @param {string} idx The name of index
      * @param {function} func The hashing function
-     * @return {boolean} TRUE, if registration was successful
      *
      * @see NDDB.view
      * @see NDDB.isReservedWord
      * @see NDDB.rebuildIndexes
-     *
      */
     NDDB.prototype.hash = function(idx, func) {
         if (('string' !== typeof idx) && ('number' !== typeof idx)) {
-            throw new TypeError(this._getConstrName() + '.hash: ' +
-                                'idx must be string or number.');
+            this.throwErr('TypeError', 'hash', 'idx must be string or number');
         }
         if (this.isReservedWord(idx)) {
-            throw new Error(this._getConstrName() + '.hash: ' +
-                            'idx is reserved word (' + idx + ')');
+            this.throwErr('TypeError', 'hash', 'idx is reserved word: ' + idx);
         }
         if ('function' !== typeof func) {
-            throw new TypeError(this._getConstrName() + '.hash: ' +
-                                'func must be function.');
+            this.throwErr('TypeError', 'hash', 'func must be function');
         }
         this.__H[idx] = func, this[idx] = {};
-        return true;
     };
 
     //### NDDB.h
@@ -6184,6 +6295,8 @@ if (!JSON) {
      * Adds an element to a view
      *
      * @param {object} o The element to index
+     *
+     * @see NDDB.view
      */
     NDDB.prototype._viewIt = function(o) {
         var func, id, index, key, settings;
@@ -6193,7 +6306,16 @@ if (!JSON) {
             if (this.__V.hasOwnProperty(key)) {
                 func = this.__V[key];
                 index = func(o);
-                if ('undefined' === typeof index) continue;
+                if ('undefined' === typeof index) {
+                    // Element must be deleted, if already in hash.
+                    if (!this[key]) continue;
+                    if ('undefined' !== typeof
+                        this[key].nddbid.resolve[o._nddbid]) {
+
+                        this[key].nddbid.remove(o._nddbid);
+                    }
+                    continue;
+                }
                 //this.__V[idx] = func, this[idx] = new this.constructor();
                 if (!this[key]) {
                     // Create a copy of the current settings,
@@ -6203,7 +6325,7 @@ if (!JSON) {
                     settings = this.cloneSettings({V: ''});
                     this[key] = new NDDB(settings);
                 }
-                this[key].insert(o);1
+                this[key].insert(o);
             }
         }
     };
@@ -6214,10 +6336,11 @@ if (!JSON) {
      * Hashes an element
      *
      * @param {object} o The element to hash
-     * @return {boolean} TRUE, if insertion to an index was successful
+     *
+     * @see NDDB.hash
      */
     NDDB.prototype._hashIt = function(o) {
-        var h, id, hash, key, settings;
+        var h, id, hash, key, settings, oldHash;
         if (!o || J.isEmpty(this.__H)) return false;
 
         for (key in this.__H) {
@@ -6225,7 +6348,14 @@ if (!JSON) {
                 h = this.__H[key];
                 hash = h(o);
 
-                if ('undefined' === typeof hash) continue;
+                if ('undefined' === typeof hash) {
+                    oldHash = this.hashtray.get(key, o._nddbid);
+                    if (oldHash) {
+                        this[key][oldHash].nddbid.remove(o._nddbid);
+                        this.hashtray.remove(key, o._nddbid);
+                    }
+                    continue;
+                }
                 if (!this[key]) this[key] = {};
 
                 if (!this[key][hash]) {
@@ -6236,6 +6366,7 @@ if (!JSON) {
                     this[key][hash] = new NDDB(settings);
                 }
                 this[key][hash].insert(o);
+                this.hashtray.set(key, o._nddbid, hash);
             }
         }
     };
@@ -6249,8 +6380,9 @@ if (!JSON) {
      *
      * Available events:
      *
-     *  `insert`: each time an item is inserted
-     *  `remove`: each time a collection of items is removed
+     *   - `insert`: each time an item is inserted
+     *   - `remove`: each time an item, or a collection of items, is removed
+     *   - `update`: each time an item is updated
      *
      * Examples.
      *
@@ -6259,20 +6391,29 @@ if (!JSON) {
      *
      * var trashBin = new NDDB();
      *
-     * db.on('insert', function(item){
-     *          item.id = getMyNextId();
+     * db.on('insert', function(item) {
+     *     item.id = getMyNextId();
      * });
      *
      * db.on('remove', function(array) {
-     *          trashBin.importDB(array);
+     *     trashBin.importDB(array);
      * });
      * ```
      *
+     * @param {string} event The name of an event: 'insert', 'update', 'remove'
+     * @param {function} func The callback function associated to the event
      */
     NDDB.prototype.on = function(event, func) {
-        if (!event || !func || !this.hooks[event]) return;
+        if ('string' !== typeof event) {
+            this.throwErr('TypeError', 'on', 'event must be string');
+        }
+        if ('function' !== typeof func) {
+            this.throwErr('TypeError', 'on', 'func must be function');
+        }
+        if (!this.hooks[event]) {
+            this.throwErr('TypeError', 'on', 'unknown event: ' + event);
+        }
         this.hooks[event].push(func);
-        return true;
     };
 
     /**
@@ -6281,13 +6422,24 @@ if (!JSON) {
      * Deregister an event, or an event listener
      *
      * @param {string} event The event name
-     * @param {function} func Optional. The specific function to deregister
+     * @param {function} func Optional. The specific function to deregister.
+     *   If empty, all the event listensers for `event` are cleared.
      *
-     * @return Boolean TRUE, if the removal is successful
+     * @return {boolean} TRUE, if the removal is successful
      */
     NDDB.prototype.off = function(event, func) {
         var i;
-        if (!event || !this.hooks[event] || !this.hooks[event].length) return;
+        if ('string' !== typeof event) {
+            this.throwErr('TypeError', 'off', 'event must be string');
+        }
+        if (func && 'function' !== typeof func) {
+            this.throwErr('TypeError', 'off',
+                          'func must be function or undefined');
+        }
+        if (!this.hooks[event]) {
+            this.throwErr('TypeError', 'off', 'unknown event: ' + event);
+        }
+        if (!this.hooks[event].length) return false;
 
         if (!func) {
             this.hooks[event] = [];
@@ -6300,20 +6452,23 @@ if (!JSON) {
             }
         }
         return false;
-    }
+    };
 
     /**
      * ### NDDB.emit
      *
      * Fires all the listeners associated with an event
      *
-     * Accepts any number of parameters, the first one is the event type, and
-     * the rest will be passed to the event listeners.
+     * Accepts any number of parameters, the first one is the name
+     * of the event, and the remaining will be passed to the event listeners.
      */
     NDDB.prototype.emit = function() {
         var i, event;
         event = Array.prototype.splice.call(arguments, 0, 1);
-        if (!event || !this.hooks[event] || !this.hooks[event].length) {
+        if ('string' !== typeof event[0]) {
+            this.throwErr('TypeError', 'emit', 'first argument must be string');
+        }
+        if (!this.hooks[event] || !this.hooks[event].length) {
             return;
         }
         for (i = 0; i < this.hooks[event].length; i++) {
@@ -6460,6 +6615,7 @@ if (!JSON) {
      * @param {string} d The dimension of comparison
      * @param {string} op Optional. The operation to perform
      * @param {mixed} value Optional. The right-hand element of comparison
+     *
      * @return {NDDB} A new NDDB instance with the currently
      *   selected items in memory
      *
@@ -6481,6 +6637,7 @@ if (!JSON) {
      * @param {string} d The dimension of comparison
      * @param {string} op Optional. The operation to perform
      * @param {mixed} value Optional. The right-hand element of comparison
+     *
      * @return {NDDB} A new NDDB instance with the currently
      *   selected items in memory
      *
@@ -6510,6 +6667,7 @@ if (!JSON) {
      * @param {string} d The dimension of comparison
      * @param {string} op Optional. The operation to perform
      * @param {mixed} value Optional. The right-hand element of comparison
+     *
      * @return {NDDB} A new NDDB instance with the currently
      *   selected items in memory
      *
@@ -6543,6 +6701,7 @@ if (!JSON) {
      * @param {string} d The dimension of comparison
      * @param {string} op Optional. The operation to perform
      * @param {mixed} value Optional. The right-hand element of comparison
+     *
      * @return {NDDB} A new NDDB instance with the currently
      *   selected items in memory
      *
@@ -6551,7 +6710,6 @@ if (!JSON) {
      * @see NDDB.or
      * @see NDDB.execute
      * @see NDDB.fetch
-     *
      */
     NDDB.prototype.selexec = function(d, op, value) {
         return this.select(d, op, value).execute();
@@ -6560,14 +6718,15 @@ if (!JSON) {
     /**
      * ### NDDB.execute
      *
-     * Executes a search with the criteria specified by `select` statements
+     * Returns a new NDDB instance containing only the items currently selected
      *
      * Does not reset the query object, and it is possible to reuse the current
-     * selection multiple times
+     * selection multiple times.
      *
      * @param {string} d The dimension of comparison
      * @param {string} op Optional. The operation to perform
      * @param {mixed} value Optional. The right-hand element of comparison
+     *
      * @return {NDDB} A new NDDB instance with selected items in the db
      *
      * @see NDDB.select
@@ -6582,56 +6741,65 @@ if (!JSON) {
     /**
      * ### NDDB.exists
      *
-     * Returns TRUE if a copy of the object exists in
-     * the database
+     * Returns TRUE if a copy of the object exists in the database / selection
      *
      * @param {object} o The object to look for
+     *
      * @return {boolean} TRUE, if a copy is found
      *
      * @see JSUS.equals
+     * @see NDDB.fetch
      */
     NDDB.prototype.exists = function(o) {
-        if (!o) return false;
-
-        for (var i = 0 ; i < this.db.length ; i++) {
-            if (J.equals(this.db[i], o)) {
+        var i, len, db;
+        if ('object' !== typeof o && 'function' !== typeof o) {
+            this.throwErr('TypeError', 'exists', 'o must be object or function');
+        }
+        db = this.fetch();
+        len = db.length;
+        for (i = 0 ; i < db.length ; i++) {
+            if (J.equals(db[i], o)) {
                 return true;
             }
         }
-
         return false;
     };
 
     /**
      * ### NDDB.limit
      *
-     * Creates a copy of the current database containing only
-     * the first N entries
+     * Breeds a new NDDB instance with only the first N entries
+     *
+     * If a selection is active it will apply the limit to the
+     * current selection only.
      *
      * If limit is a negative number, selection is made starting
      * from the end of the database.
      *
      * @param {number} limit The number of entries to include
+     *
      * @return {NDDB} A "limited" copy of the current instance of NDDB
      *
+     * @see NDDB.breed
      * @see NDDB.first
      * @see NDDB.last
      */
     NDDB.prototype.limit = function(limit) {
         var db;
         if ('number' !== typeof limit) {
-            throw new TypeError(this._getConstrName() +
-                                '.limit: limit must be number.');
+            this.throwErr('TypeError', 'exists', 'limit must be number');
         }
-        if (limit === 0) return this.breed();
-        db = (limit > 0) ? this.db.slice(0, limit) : this.db.slice(limit);
+        db = this.fetch();
+        if (limit !== 0) {
+            db = (limit > 0) ? db.slice(0, limit) : db.slice(limit);
+        }
         return this.breed(db);
     };
 
     /**
      * ### NDDB.reverse
      *
-     * Reverses the order of all the entries in the database
+     * Reverses the order of all the entries in the database / selection
      *
      * @see NDDB.sort
      */
@@ -6643,8 +6811,9 @@ if (!JSON) {
     /**
      * ### NDDB.sort
      *
-     * Sort the db according to one of the following
-     * criteria:
+     * Sort the db according to one of the several criteria.
+     *
+     * Available sorting options:
      *
      *  - globalCompare function, if no parameter is passed
      *  - one of the dimension, if a string is passed
@@ -6656,21 +6825,23 @@ if (!JSON) {
      * Notice: the order of entries is changed.
      *
      * @param {string|array|function} d Optional. The criterium of sorting
+     *
      * @return {NDDB} A sorted copy of the current instance of NDDB
+     *
+     * @see NDDB.globalCompare
      */
     NDDB.prototype.sort = function(d) {
         var func, that;
-        // GLOBAL compare
+
+        // Global compare.
         if (!d) {
             func = this.globalCompare;
         }
-
-        // FUNCTION
+        // User-defined function.
         else if ('function' === typeof d) {
             func = d;
         }
-
-        // ARRAY of dimensions
+        // Array of dimensions.
         else if (d instanceof Array) {
             that = this;
             func = function(a,b) {
@@ -6682,8 +6853,7 @@ if (!JSON) {
                 return result;
             }
         }
-
-        // SINGLE dimension
+        // Single dimension.
         else {
             func = this.getComparator(d);
         }
@@ -6717,26 +6887,30 @@ if (!JSON) {
     /**
      * ### NDDB.filter
      *
-     * Filters the entries of the database according to the
-     * specified callback function.
+     * Filters the entries according to a user-defined function
+     *
+     * If a selection is active it will filter items only within the
+     * current selection.
      *
      * A new NDDB instance is breeded.
      *
      * @param {function} func The filtering function
+     *
      * @return {NDDB} A new instance of NDDB containing the filtered entries
      *
      * @see NDDB.breed
-     *
      */
     NDDB.prototype.filter = function(func) {
-        return this.breed(this.db.filter(func));
+        return this.breed(this.fetch().filter(func));
     };
-
 
     /**
      * ### NDDB.each || NDDB.forEach
      *
-     * Applies a callback function to each element in the db.
+     * Applies a callback function to each element in the db
+     *
+     * If a selection is active, the callback will be applied to items
+     * within the current selection only.
      *
      * It accepts a variable number of input arguments, but the first one
      * must be a valid callback, and all the following are passed as parameters
@@ -6745,10 +6919,16 @@ if (!JSON) {
      * @see NDDB.map
      */
     NDDB.prototype.each = NDDB.prototype.forEach = function() {
-        if (arguments.length === 0) return;
-        var func = arguments[0], i;
-        for (i = 0 ; i < this.db.length ; i++) {
-            arguments[0] = this.db[i];
+        var func, i, db, len;
+        func = arguments[0];
+        if ('function' !== typeof func) {
+            this.throwErr('TypeError', 'each',
+                          'first argument must be function');
+        }
+        db = this.fetch();
+        len = db.length;
+        for (i = 0 ; i < len ; i++) {
+            arguments[0] = db[i];
             func.apply(this, arguments);
         }
     };
@@ -6764,22 +6944,27 @@ if (!JSON) {
      * to the callback
      *
      * @return {array} out The result of the mapping
-     * @see NDDB.each
      *
+     * @see NDDB.each
      */
     NDDB.prototype.map = function() {
-        if (arguments.length === 0) return;
-        var func = arguments[0],
-        out = [], o, i;
-        for (i = 0 ; i < this.db.length ; i++) {
-            arguments[0] = this.db[i];
+        var func, i, db, len, out, o;
+        func = arguments[0];
+        if ('function' !== typeof func) {
+            this.throwErr('TypeError', 'map', 'first argument must be function');
+        }
+        db = this.fetch();
+        len = db.length;
+        out = [];
+        for (i = 0 ; i < db.length ; i++) {
+            arguments[0] = db[i];
             o = func.apply(this, arguments);
             if ('undefined' !== typeof o) out.push(o);
         }
         return out;
     };
 
-    // # Update
+    // ## Update
 
     /**
      * ### NDDB.update
@@ -6794,19 +6979,30 @@ if (!JSON) {
      *
      * @param {object} update An object containing the properties
      *  that will be updated.
+     *
      * @return {NDDB} A new instance of NDDB with updated entries
      *
      * @see JSUS.mixin
      */
     NDDB.prototype.update = function(update) {
-        if (!this.db.length || !update) return this;
-
-        for (var i = 0; i < this.db.length; i++) {
-            this.emit('update', this.db[i], update);
-            J.mixin(this.db[i], update);
+        var i, len, db;
+        if ('object' !== typeof update) {
+            this.throwErr('TypeError', 'update', 'update must be object');
         }
 
-        this._autoUpdate();
+        // Gets items and resets the current selection.
+        db = this.fetch();
+        if (db.length) {
+            len = db.length;
+            for (i = 0; i < len; i++) {
+                this.emit('update', db[i], update);
+                J.mixin(db[i], update);
+                this._indexIt(db[i]);
+                this._hashIt(db[i]);
+                this._viewIt(db[i]);
+            }
+            this._autoUpdate({indexes: false});
+        }
         return this;
     };
 
@@ -6822,6 +7018,7 @@ if (!JSON) {
     NDDB.prototype.removeAllEntries = function() {
         if (!this.db.length) return this;
         this.emit('remove', this.db);
+        this.nddbid.resolve = {};
         this.db = [];
         this._autoUpdate();
         return this;
@@ -6842,20 +7039,23 @@ if (!JSON) {
      * @return {boolean} TRUE, if the database was cleared
      */
     NDDB.prototype.clear = function(confirm) {
+        var i;
         if (confirm) {
             this.db = [];
+            this.nddbid.resolve = {};
             this.tags = {};
             this.query.reset();
             this.nddb_pointer = 0;
+            this.lastSelection = [];
+            this.hashtray.clear();
 
-            var i;
             for (i in this.__H) {
                 if (this[i]) delete this[i]
             }
             for (i in this.__C) {
                 if (this[i]) delete this[i]
             }
-            for (var i in this.__I) {
+            for (i in this.__I) {
                 if (this[i]) delete this[i]
             }
         }
@@ -6881,10 +7081,13 @@ if (!JSON) {
      *   is performed. Defaults 'joined'
      * @param {string|array} select Optional. The properties to copy
      *   in the join. Defaults undefined
+     *
      * @return {NDDB} A new database containing the joined entries
      *
      * @see NDDB._join
      * @see NDDB.breed
+     *
+     * TODO: allow join on multiple properties.
      */
     NDDB.prototype.join = function(key1, key2, pos, select) {
         // <!--
@@ -6906,8 +7109,7 @@ if (!JSON) {
     /**
      * ### NDDB.concat
      *
-     * Copies all the entries (or selected properties of them) containing key2
-     * in all the entries containing key1.
+     * Copies the (sub)entries with 'key2' in all the entries with 'key1'
      *
      * Nested properties can be accessed with '.'.
      *
@@ -6917,13 +7119,14 @@ if (!JSON) {
      *   performed. Defaults 'joined'
      * @param {string|array} select Optional. The properties to copy in
      *   the join. Defaults undefined
+     *
      * @return {NDDB} A new database containing the concatenated entries
      *
      *  @see NDDB._join
      *  @see JSUS.join
      */
     NDDB.prototype.concat = function(key1, key2, pos, select) {
-        return this._join(key1, key2, function(){ return true;}, pos, select);
+        return this._join(key1, key2, function(){ return true; }, pos, select);
     };
 
     /**
@@ -6951,7 +7154,9 @@ if (!JSON) {
      *   is performed. Defaults 'joined'
      * @param {string|array} select Optional. The properties to copy
      *   in the join. Defaults undefined
+     *
      * @return {NDDB} A new database containing the joined entries
+     *
      * @see NDDB.breed
      */
     NDDB.prototype._join = function(key1, key2, comparator, pos, select) {
@@ -6983,33 +7188,39 @@ if (!JSON) {
                             o[pos] = o2;
                             out.push(o);
                         }
-
                     }
                 }
             }
         }
-
         return this.breed(out);
     };
 
     /**
      * ### NDDB.split
      *
-     * Splits all the entries in the database containing
-     * the passed dimension.
+     * Splits all the entries  containing the specified dimension
      *
-     * New entries are created and a new NDDB object is
-     * breeded to allows method chaining.
+     * If a active selection if found, operation is applied only to the subset.
+     *
+     * New entries are created and a new NDDB object is breeded
+     * to allows method chaining.
      *
      * @param {string} key The dimension along which items will be split
+     *
      * @return {NDDB} A new database containing the split entries
      *
      * @see JSUS.split
      */
     NDDB.prototype.split = function(key) {
-        var out = [], i;
-        for (i = 0; i < this.db.length; i++) {
-            out = out.concat(J.split(this.db[i], key));
+        var out, i, db, len;
+        if ('string' !== typeof key) {
+            this.throwErr('TypeError', 'split', 'key must be string');
+        }
+        db = this.fetch();
+        len = db.length;
+        out = [];
+        for (i = 0; i < len; i++) {
+            out = out.concat(J.split(db[i], key));
         }
         return this.breed(out);
     };
@@ -7019,19 +7230,33 @@ if (!JSON) {
     /**
      * ### NDDB.fetch
      *
-     * Fetches all the entries in the database and returns
-     * them in one array
+     * Returns array of selected entries in the database
      *
-     * Examples
+     * If no selection criteria is specified returns all entries.
+     *
+     * By default, it resets the current selection, and further calls to
+     * `fetch` will return the full database.
+     *
+     * It stores a reference to the most recent array of selected items
+     * under `this.lastSelection`.
+     *
+     * Examples:
      *
      * ```javascript
      * var db = new NDDB();
-     * db.insert([ { a:1, b:{c:2}, d:3 } ]);
+     * db.importDB([ { a: 1, b: {c: 2}, d: 3 } ]);
      *
-     * db.fetch();    // [ {a: 1, b: {c: 2}, d: 3} ]
+     * db.fetch();    // [ { a: 1, b: {c: 2}, d: 3 } ]
+     *
+     * db.select('a', '=', 1);
+     *
+     * db.fetch(); // [ { a: 1 } ]
      * ```
      *
      * No further chaining is permitted after fetching.
+     *
+     * @param {boolean} doNotReset Optional. If TRUE, it does not reset
+     *   the current selection. Default, TRUE
      *
      * @return {array} out The fetched values
      *
@@ -7039,10 +7264,23 @@ if (!JSON) {
      * @see NDDB.fetchArray
      * @see NDDB.fetchKeyArray
      * @see NDDB.fetchSubObj
-     *
+     * @see NDDB.lastSelection
      */
-    NDDB.prototype.fetch = function() {
-        return this.db;
+    NDDB.prototype.fetch = function(doNotReset) {
+        var db;
+        if (this.db.length && this.query.query.length) {
+            if (doNotReset && 'boolean' !== typeof doNotReset) {
+                this.throwErr('TypeError', 'fetch',
+                              'doNotReset must be undefined or boolean.');
+            }
+            db = this.db.filter(this.query.get.call(this.query));
+            if (!doNotReset) this.query.reset();
+        }
+        else {
+            db = this.db;
+        }
+        this.lastSelection = db;
+        return db;
     };
 
     /**
@@ -7064,6 +7302,7 @@ if (!JSON) {
      *
      * @param {string|array} key Optional. If set, returned objects will
      *   have only such properties
+     *
      * @return {array} out The fetched objects
      *
      * @see NDDB.fetch
@@ -7072,10 +7311,11 @@ if (!JSON) {
      * @see NDDB.fetchKeyArray
      */
     NDDB.prototype.fetchSubObj= function(key) {
+        var i, el, db, out;
         if (!key) return [];
-        var i, el, out = [];
-        for (i=0; i < this.db.length; i++) {
-            el = J.subobj(this.db[i], key);
+        db = this.fetch(), out = [];
+        for (i = 0; i < db.length; i++) {
+            el = J.subobj(db[i], key);
             if (!J.isEmpty(el)) out.push(el);
         }
         return out;
@@ -7113,6 +7353,7 @@ if (!JSON) {
      *
      * @param {string|array} key Optional. If set, returns only
      *   the value from the specified property
+     *
      * @return {array} out The fetched values
      *
      * @see NDDB.fetch
@@ -7121,20 +7362,22 @@ if (!JSON) {
      * @see NDDB.fetchSubObj
      */
     NDDB.prototype.fetchValues = function(key) {
-        var el, i, out, typeofkey;
+        var db, el, i, out, typeofkey;
+
+        db = this.fetch();
 
         typeofkey = typeof key, out = {};
 
         if (typeofkey === 'undefined') {
-            for (i=0; i < this.db.length; i++) {
-                J.augment(out, this.db[i], J.keys(this.db[i]));
+            for (i=0; i < db.length; i++) {
+                J.augment(out, db[i], J.keys(db[i]));
             }
         }
 
         else if (typeofkey === 'string') {
             out[key] = [];
-            for (i=0; i < this.db.length; i++) {
-                el = J.getNestedValue(key, this.db[i]);
+            for (i=0; i < db.length; i++) {
+                el = J.getNestedValue(key, db[i]);
                 if ('undefined' !== typeof el) {
                     out[key].push(el);
                 }
@@ -7143,8 +7386,8 @@ if (!JSON) {
 
         else if (J.isArray(key)) {
             out = J.melt(key, J.rep([], key.length)); // object not array
-            for ( i = 0 ; i < this.db.length ; i++) {
-                el = J.subobj(this.db[i], key);
+            for ( i = 0 ; i < db.length ; i++) {
+                el = J.subobj(db[i], key);
                 if (!J.isEmpty(el)) {
                     J.augment(out, el);
                 }
@@ -7229,12 +7472,11 @@ if (!JSON) {
      * @param {string|array} key Optional. If set, returns key/values only
      *   from the specified property
      * @param {boolean} keyed. Optional. If set, also the keys are returned
-     * @return {array} out The fetched values
      *
+     * @return {array} out The fetched values
      */
     NDDB.prototype._fetchArray = function(key, keyed) {
-
-        var cb, out, el, i;
+        var db, cb, out, el, i;
 
         if (keyed) {
 
@@ -7258,9 +7500,9 @@ if (!JSON) {
             }
         }
 
-        out = [];
-        for (i=0; i < this.db.length; i++) {
-            el = cb.call(this.db[i], this.db[i], key);
+        db = this.fetch(), out = [];
+        for (i = 0; i < db.length; i++) {
+            el = cb.call(db[i], db[i], key);
             if ('undefined' !== typeof el) out.push(el);
         }
 
@@ -7298,8 +7540,7 @@ if (!JSON) {
     /**
      * ### NDDB.fetchKeyArray
      *
-     * Exactly as NDDB.fetchArray, but also the keys are added to the
-     * returned values.
+     * Like NDDB.fetchArray, but also the keys are added
      *
      * Examples
      *
@@ -7316,6 +7557,7 @@ if (!JSON) {
      *
      * @param {string} key Optional. If set, returns only the value
      *   from the specified property
+     *
      * @return {array} out The fetched values
      *
      * @see NDDB._fetchArray
@@ -7357,17 +7599,19 @@ if (!JSON) {
      * ```
      *
      * @param {string} key If the dimension for grouping
-     * @return {array} outs The array of groups
      *
+     * @return {array} outs The array of groups
      */
     NDDB.prototype.groupBy = function(key) {
-        if (!key) return this.db;
+        var groups, outs, i, el, out;
+        db = this.fetch();
+        if (!key) return db;
 
-        var groups = [], outs = [], i, el, out;
-        for (i = 0 ; i < this.db.length ; i++) {
-            el = J.getNestedValue(key, this.db[i]);
+        groups = [], outs = [];
+        for (i = 0 ; i < db.length ; i++) {
+            el = J.getNestedValue(key, db[i]);
             if ('undefined' === typeof el) continue;
-            // Creates a new group and add entries to it
+            // Creates a new group and add entries to it.
             if (!J.in_array(el, groups)) {
                 groups.push(el);
                 out = this.filter(function(elem) {
@@ -7375,7 +7619,7 @@ if (!JSON) {
                         return this;
                     }
                 });
-                // Reset nddb_pointer in subgroups
+                // Reset nddb_pointer in subgroups.
                 out.nddb_pointer = 0;
                 outs.push(out);
             }
@@ -7393,41 +7637,51 @@ if (!JSON) {
      * If key is undefined, the size of the databse is returned.
      *
      * @param {string} key The dimension to count
+     *
      * @return {number} count The number of items along the specified dimension
      *
-     * @see NDDB.length
+     * @see NDDB.size
      */
     NDDB.prototype.count = function(key) {
-        if ('undefined' === typeof key) return this.db.length;
-        var count = 0;
-        for (var i = 0; i < this.db.length; i++) {
-            if (J.hasOwnNestedProperty(key, this.db[i])){
+        var i, count, len, db;
+        db = this.fetch();
+        len = db.length;
+        if ('undefined' === typeof key) return len;
+        if ('string' !== typeof key) {
+            this.throwErr('TypeError', 'count',
+                          'key must be string or undefined');
+        }
+        count = 0;
+        for (i = 0; i < len; i++) {
+            if (J.hasOwnNestedProperty(key, db[i])){
                 count++;
             }
         }
         return count;
     };
 
-
     /**
      * ### NDDB.sum
      *
-     * Returns the total sum of the values of all the entries
-     * in the database containing the specified key.
+     * Returns the sum of the values of all the entries with the specified key
      *
      * Non numeric values are ignored.
      *
      * @param {string} key The dimension to sum
-     * @return {number|boolean} sum The sum of the values for the dimension,
-     *   or FALSE if it does not exist
      *
+     * @return {number} sum The sum of the values for the dimension,
+     *   or NaN if it does not exist
      */
     NDDB.prototype.sum = function(key) {
-        if ('undefined' === typeof key) return false;
-        var sum = 0;
-        for (var i=0; i < this.db.length; i++) {
-            var tmp = J.getNestedValue(key, this.db[i]);
+        var sum, i, len, tmp, db;
+        if ('string' !== typeof key) {
+            this.throwErr('TypeError', 'sum', 'key must be string');
+        }
+        db = this.fetch(), len = db.length, sum = NaN;
+        for (i = 0; i < len; i++) {
+            tmp = J.getNestedValue(key, db[i]);
             if (!isNaN(tmp)) {
+                if (isNaN(sum)) sum = 0;
                 sum += tmp;
             }
         }
@@ -7437,66 +7691,73 @@ if (!JSON) {
     /**
      * ### NDDB.mean
      *
-     * Returns the average of the values of all the entries
-     * in the database containing the specified key.
+     * Returns the mean of the values of all the entries with the specified key
      *
      * Entries with non numeric values are ignored, and excluded
      * from the computation of the mean.
      *
      * @param {string} key The dimension to average
-     * @return {number|boolean} The mean of the values for the dimension,
-     *   or FALSE if it does not exist
      *
+     * @return {number} The mean of the values for the dimension,
+     *   or NaN if it does not exist
      */
     NDDB.prototype.mean = function(key) {
-        if ('undefined' === typeof key) return false;
-        var sum = 0;
-        var count = 0;
-        for (var i=0; i < this.db.length; i++) {
-            var tmp = J.getNestedValue(key, this.db[i]);
+        var sum, count, tmp, db;
+        var i, len;
+        if ('string' !== typeof key) {
+            this.throwErr('TypeError', 'mean', 'key must be string');
+        }
+        db = this.fetch();
+        len = db.length;
+        sum = 0, count = 0;
+        for (i = 0; i < len; i++) {
+            tmp = J.getNestedValue(key, db[i]);
             if (!isNaN(tmp)) {
                 sum += tmp;
                 count++;
             }
         }
-        return (count === 0) ? 0 : sum / count;
+        return (count === 0) ? NaN : sum / count;
     };
 
     /**
      * ### NDDB.stddev
      *
-     * Returns the standard deviation of the values of all the entries
-     * in the database containing the specified key.
+     * Returns the std. dev. of the values of the entries with the specified key
+     *
+     * It uses the computational formula for sample standard deviation,
+     * using N - 1 at the denominator of the sum of squares.
      *
      * Entries with non numeric values are ignored, and excluded
      * from the computation of the standard deviation.
      *
      * @param {string} key The dimension to average
-     * @return {number|boolean} The mean of the values for the dimension,
-     *   or FALSE if it does not exist
      *
-     * @see NDDB.mean
-     *
-     * TODO: using computation formula of stdev
+     * @return {number} The standard deviations of the values for the dimension,
+     *   or NaN if it does not exist
      */
     NDDB.prototype.stddev = function(key) {
-        var V, mean, count;
-        if ('undefined' === typeof key) return false;
-        mean = this.mean(key);
-        if (isNaN(mean)) return false;
-
-        V = 0, count = 0;
-        this.each(function(e) {
-            var tmp = J.getNestedValue(key, e);
+        var count, tmp, db, i, len;
+        var sum, sumSquared;
+        if ('string' !== typeof key) {
+            this.throwErr('TypeError', 'stddev', 'key must be string');
+        }
+        db = this.fetch();
+        len = db.length;
+        if (!len || len === 1) return NaN;
+        i = -1;
+        sum = 0, sumSquared = 0, count = 0;
+        for ( ; ++i < len ; ) {
+            tmp = J.getNestedValue(key, db[i]);
             if (!isNaN(tmp)) {
-                V += Math.pow(tmp - mean, 2)
                 count++;
+                sum += tmp;
+                sumSquared += Math.pow(tmp, 2);
             }
-        });
-
-        return (V !== 0) ? Math.sqrt(V) / (count-1) : 0;
+        }
+        tmp = sumSquared - (Math.pow(sum, 2) / count);
+        return Math.sqrt( tmp / (count - 1) );
     };
-
 
     /**
      * ### NDDB.min
@@ -7507,17 +7768,23 @@ if (!JSON) {
      * Entries with non numeric values are ignored.
      *
      * @param {string} key The dimension of which to find the min
-     * @return {number|boolean} The smallest value for the dimension,
-     *   or FALSE if it does not exist
+     *
+     * @return {number} The smallest value for the dimension,
+     *   or NaN if it does not exist
      *
      * @see NDDB.max
      */
     NDDB.prototype.min = function(key) {
-        if ('undefined' === typeof key) return false;
-        var min = false;
-        for (var i=0; i < this.db.length; i++) {
-            var tmp = J.getNestedValue(key, this.db[i]);
-            if (!isNaN(tmp) && (tmp < min || min === false)) {
+        var min, tmp, db, i, len;
+        if ('string' !== typeof key) {
+            this.throwErr('TypeError', 'min', 'key must be string');
+        }
+        db = this.fetch();
+        len = db.length;
+        min = NaN;
+        for (i = 0; i < len; i++) {
+            tmp = J.getNestedValue(key, db[i]);
+            if (!isNaN(tmp) && (tmp < min || isNaN(min))) {
                 min = tmp;
             }
         }
@@ -7533,17 +7800,23 @@ if (!JSON) {
      * Entries with non numeric values are ignored.
      *
      * @param {string} key The dimension of which to find the max
-     * @return {number|boolean} The biggest value for the dimension,
-     *   or FALSE if it does not exist
+     *
+     * @return {number} The biggest value for the dimension,
+     *   or NaN if it does not exist
      *
      * @see NDDB.min
      */
     NDDB.prototype.max = function(key) {
-        if ('undefined' === typeof key) return false;
-        var max = false;
-        for (var i=0; i < this.db.length; i++) {
-            var tmp = J.getNestedValue(key, this.db[i]);
-            if (!isNaN(tmp) && (tmp > max || max === false)) {
+        var max, i, len, tmp, db;
+        if ('string' !== typeof key) {
+            this.throwErr('TypeError', 'max', 'key must be string');
+        }
+        db = this.fetch();
+        len = db.length;
+        max = NaN;
+        for (i = 0; i < len; i++) {
+            tmp = J.getNestedValue(key, db[i]);
+            if (!isNaN(tmp) && (tmp > max || isNaN(max))) {
                 max = tmp;
             }
         }
@@ -7555,20 +7828,25 @@ if (!JSON) {
     /**
      * ### NDDB.skim
      *
-     * Removes the specified properties from all the items in the database
+     * Removes the specified properties from the items
+     *
+     * If a active selection if found, operation is applied only to the subset.
      *
      * Use '.' (dot) to point to a nested property.
      *
      * Items with no property are automatically removed.
      *
      * @param {string|array} skim The selection of properties to remove
+     *
      * @return {NDDB} A new database containing the result of the skim
      *
      * @see NDDB.keep
      * @see JSUS.skim
      */
     NDDB.prototype.skim = function(skim) {
-        if (!skim) return this;
+        if ('string' !== typeof skim && !J.isArray(skim)) {
+            this.throwErr('TypeError', 'skim', 'skim must be string or array');
+        }
         return this.breed(this.map(function(e){
             var skimmed = J.skim(e, skim);
             if (!J.isEmpty(skimmed)) {
@@ -7580,21 +7858,25 @@ if (!JSON) {
     /**
      * ### NDDB.keep
      *
-     * Removes all the properties that are not specified as parameter
-     * from all the items in the database
+     * Removes all the properties that are not specified from the items
+     *
+     * If a active selection if found, operation is applied only to the subset.
      *
      * Use '.' (dot) to point to a nested property.
      *
      * Items with no property are automatically removed.
      *
      * @param {string|array} skim The selection of properties to keep
+
      * @return {NDDB} A new database containing the result of the keep operation
      *
      * @see NDDB.skim
      * @see JSUS.keep
      */
     NDDB.prototype.keep = function(keep) {
-        if (!keep) return this.breed([]);
+        if ('string' !== typeof keep && !J.isArray(keep)) {
+            this.throwErr('TypeError', 'keep', 'keep must be string or array');
+        }
         return this.breed(this.map(function(e){
             var subobj = J.subobj(e, keep);
             if (!J.isEmpty(subobj)) {
@@ -7609,57 +7891,61 @@ if (!JSON) {
     /**
      * ### NDDB.diff
      *
-     * Performs a diff of the entries in the database and the database
-     * object passed as parameter (Array or NDDB)
+     * Performs a diff of the entries of a specified databases
      *
      * Returns a new NDDB instance containing all the entries that
      * are present in the current instance, and *not* in the
      * database obj passed as parameter.
      *
      * @param {NDDB|array} nddb The external database to compare
+     *
      * @return {NDDB} A new database containing the result of the diff
      *
      * @see NDDB.intersect
      * @see JSUS.arrayDiff
      */
     NDDB.prototype.diff = function(nddb) {
-        if ('object' === typeof nddb) {
-            if (nddb instanceof NDDB || nddb instanceof this.constructor) {
-                nddb = nddb.db;
+        if (!J.isArray(nddb)) {
+            if ('object' !== typeof nddb || !J.isArray(nddb.db)) {
+                this.throwErr('TypeError', 'diff',
+                              'nddb must be array or NDDB');
             }
+            nddb = nddb.db;
         }
-        if (!nddb || !nddb.length) {
+        if (!nddb.length) {
             return this.breed([]);
         }
-        return this.breed(J.arrayDiff(this.db, nddb));
+        return this.breed(J.arrayDiff(this.fetch(), nddb));
     };
 
     /**
      * ### NDDB.intersect
      *
-     * Finds the common the entries between the current database and
-     * the database  object passed as parameter (Array or NDDB)
+     * Finds the entries in common with a specified database
      *
      * Returns a new NDDB instance containing all the entries that
      * are present both in the current instance of NDDB and in the
      * database obj passed as parameter.
      *
      * @param {NDDB|array} nddb The external database to compare
+     *
      * @return {NDDB} A new database containing the result of the intersection
      *
      * @see NDDB.diff
      * @see JSUS.arrayIntersect
      */
     NDDB.prototype.intersect = function(nddb) {
-        if ('object' === typeof nddb) {
-            if (nddb instanceof NDDB || nddb instanceof this.constructor) {
-                nddb = nddb.db;
+        if (!J.isArray(nddb)) {
+            if ('object' !== typeof nddb || !J.isArray(nddb.db)) {
+                this.throwErr('TypeError', 'intersect',
+                              'nddb must be array or NDDB');
             }
+            nddb = nddb.db;
         }
-        if (!nddb || !nddb.length) {
+        if (!nddb.length) {
             return this.breed([]);
         }
-        return this.breed(J.arrayIntersect(this.db, nddb));
+        return this.breed(J.arrayIntersect(this.fetch(), nddb));
     };
 
 
@@ -7671,12 +7957,13 @@ if (!JSON) {
      * Returns the entry at the given numerical position
      *
      * @param {number} pos The position of the entry
-     * @return {object|boolean} The requested item, or FALSE if
+     *
+     * @return {object|undefined} The requested item, or undefined if
      *  the index is invalid
      */
     NDDB.prototype.get = function(pos) {
-        if ('undefined' === typeof pos || pos < 0 || pos > (this.db.length-1)) {
-            return false;
+        if ('number' !== typeof pos) {
+            this.throwErr('TypeError', 'get', 'pos must be number');
         }
         return this.db[pos];
     };
@@ -7688,32 +7975,27 @@ if (!JSON) {
      *
      * The pointer is *not* updated.
      *
-     * Returns false, if the pointer is at an invalid position.
-     *
-     * @return {object|boolean} The current entry, or FALSE if none is found
+     * @return {object|undefined} The current entry, or undefined if the
+     *   pointer is at an invalid position
      */
     NDDB.prototype.current = function() {
-        if (this.nddb_pointer < 0 || this.nddb_pointer > (this.db.length-1)) {
-            return false;
-        }
         return this.db[this.nddb_pointer];
     };
 
     /**
      * ### NDDB.next
      *
-     * Moves the pointer to the next entry in the database
-     * and returns it
+     * Moves the pointer to the next entry in the database and returns it
      *
-     * Returns false if the pointer is at the last entry,
-     * or if database is empty.
+     * @return {object|undefined} The next entry, or undefined
+     *   if none is found
      *
-     * @return {object|boolean} The next entry, or FALSE if none is found
-     *
+     * @see NDDB.previous
      */
     NDDB.prototype.next = function() {
+        var el;
         this.nddb_pointer++;
-        var el = NDDB.prototype.current.call(this);
+        el = NDDB.prototype.current.call(this);
         if (!el) this.nddb_pointer--;
         return el;
     };
@@ -7721,17 +8003,17 @@ if (!JSON) {
     /**
      * ### NDDB.previous
      *
-     * Moves the pointer to the previous entry in the database
-     * and returns it
+     * Moves the pointer to the previous entry in the database and returns it
      *
-     * Returns false if the pointer is at the first entry,
-     * or if database is empty.
+     * @return {object|undefined} The previous entry, or undefined
+     *   if none is found
      *
-     * @return {object|boolean} The previous entry, or FALSE if none is found
+     * @see NDDB.next
      */
     NDDB.prototype.previous = function() {
+        var el;
         this.nddb_pointer--;
-        var el = NDDB.prototype.current.call(this);
+        el = NDDB.prototype.current.call(this);
         if (!el) this.nddb_pointer++;
         return el;
     };
@@ -7739,22 +8021,23 @@ if (!JSON) {
     /**
      * ### NDDB.first
      *
-     * Moves the pointer to the first entry in the database,
-     * and returns it
+     * Returns the last entry in the current selection / database
      *
-     * Returns the first entry of the database, or undefined
-     * if the database is empty.
+     * Returns undefined if the current selection / database is empty.
      *
-     * @param {string} key Optional. If set, moves to the pointer
-     *   to the first entry along this dimension
+     * @param {string} updatePointer Optional. If set, the pointer
+     *   is not moved to the first entry (if any)
+     *
      * @return {object} The first entry found
      *
      * @see NDDB.last
+     * @see NDDB.fetch
+     * @see NDDB.nddb_pointer
      */
-    NDDB.prototype.first = function(key) {
-        var db = this.fetch(key);
+    NDDB.prototype.first = function(doNotUpdatePointer) {
+        var db = this.fetch();
         if (db.length) {
-            this.nddb_pointer = 0;
+            if (!doNotUpdatePointer) this.nddb_pointer = 0;
             return db[0];
         }
         return undefined;
@@ -7763,22 +8046,23 @@ if (!JSON) {
     /**
      * ### NDDB.last
      *
-     * Moves the pointer to the first last in the database,
-     * and returns it
+     * Returns the last entry in the current selection / database
      *
-     * Returns the last entry of the database, or undefined
-     * if the database is empty.
+     * Returns undefined if the current selection / database is empty.
      *
-     * @param {string} key Optional. If set, moves to the pointer
-     *   to the last entry along this dimension
+     * @param {string} doNotUpdatePointer Optional. If set, the pointer is not
+     *   moved to the last entry (if any)
+     *
      * @return {object} The last entry found
      *
      * @see NDDB.first
+     * @see NDDB.fetch
+     * @see NDDB.nddb_pointer
      */
-    NDDB.prototype.last = function(key) {
-        var db = this.fetch(key);
+    NDDB.prototype.last = function(doNotUpdatePointer) {
+        var db = this.fetch();
         if (db.length) {
-            this.nddb_pointer = db.length-1;
+            if (!doNotUpdatePointer) this.nddb_pointer = db.length-1;
             return db[db.length-1];
         }
         return undefined;
@@ -7794,7 +8078,7 @@ if (!JSON) {
      *
      * The second parameter can be the index of an object
      * in the database, the object itself, or undefined. In
-     * the latter case, the current valye of `nddb_pointer`
+     * the latter case, the current value of `nddb_pointer`
      * is used to create the reference.
      *
      * The tag is independent from sorting and deleting operations,
@@ -7809,9 +8093,8 @@ if (!JSON) {
      */
     NDDB.prototype.tag = function(tag, idx) {
         var ref, typeofIdx;
-        if (('string' !== typeof tag) && ('number' !== typeof tag)) {
-            throw new TypeError(this._getConstrName() +
-                                '.tag: tag must be string or number.');
+        if ('string' !== typeof tag && 'number' !== typeof tag) {
+            this.throwErr('TypeError', 'tag', 'tag must be string or number');
         }
 
         ref = null, typeofIdx = typeof idx;
@@ -7822,8 +8105,7 @@ if (!JSON) {
         else if (typeofIdx === 'number') {
 
             if (idx > this.length || idx < 0) {
-                throw new TypeError(this._getConstrName() +
-                                    '.tag: invalid index provided');
+                this.throwErr('Error', 'tag', 'invalid index provided: ' + idx);
             }
             ref = this.db[idx];
         }
@@ -7841,14 +8123,14 @@ if (!JSON) {
      * Returns the element associated with the given tag.
      *
      * @param {string} tag An alphanumeric id
+     *
      * @return {object} The object associated with the tag
      *
      * @see NDDB.tag
      */
     NDDB.prototype.resolveTag = function(tag) {
         if ('string' !== typeof tag) {
-            throw new TypeError(this._getConstrName() +
-                                '.resolveTag: tag must be string.');
+            this.throwErr('TypeError', 'resolveTag', 'tag must be string');
         }
         return this.tags[tag];
     };
@@ -7887,29 +8169,22 @@ if (!JSON) {
      *    the database is saved
      * @param {compress} boolean Optional. If TRUE, output will be compressed.
      *    Defaults, FALSE
-     * @return {boolean} TRUE, if operation is successful
      *
      * @see NDDB.load
      * @see NDDB.stringify
      * @see https://github.com/douglascrockford/JSON-js/blob/master/cycle.js
-
-     *
      */
     NDDB.prototype.save = function(file, cb, compress) {
         if ('string' !== typeof file) {
-            throw new TypeError(this._getConstrName() +
-                                'load: you must specify a valid file name.');
+            this.throwErr('TypeError', 'save', 'file must be string');
         }
         compress = compress || false;
-        // Try to save in the browser, e.g. with Shelf.js
+        // Try to save in the browser, e.g. with Shelf.js.
         if (!this.storageAvailable()) {
-            throw new Error(this._getConstrName() +
-                            '.save: no support for persistent storage.');
-            return false;
+            this.throwErr('Error', 'save', 'no persistent storage available');
         }
         store(file, this.stringify(compress));
         if (cb) cb();
-        return true;
     };
 
     /**
@@ -7924,48 +8199,43 @@ if (!JSON) {
      *
      * Cyclic objects previously decycled will be retrocycled.
      *
-     * @param {string} file The file system path, or the identifier for the browser database
-     * @param {function} cb Optional. A callback to execute after the database was saved
-     * @return {boolean} TRUE, if operation is successful
+     * @param {string} file The file system path, or the identifier
+     *   for the browser database
+     * @param {function} cb Optional. A callback to execute after
+     *   the database was saved
      *
      * @see NDDB.loadCSV
      * @see NDDB.save
      * @see NDDB.stringify
      * @see JSUS.parse
      * @see https://github.com/douglascrockford/JSON-js/blob/master/cycle.js
-     *
      */
     NDDB.prototype.load = function(file, cb, options) {
         var items, i;
         if ('string' !== typeof file) {
-            throw new TypeError(this._getConstrName() +
-                                '.load: you must specify a valid file name.');
+            this.throwErr('TypeError', 'load', 'file must be string');
         }
         if (!this.storageAvailable()) {
-            throw new Error(this._getConstrName() +
-                            '.load: no support for persistent storage found.');
+            this.throwErr('Error', 'load', 'no persistent storage found');
         }
 
         items = store(file);
 
         if ('undefined' === typeof items) {
-            this.log(this._getConstrName() +
-                     '.load: nothing found to load', 'WARN');
-            return false;
+            // Nothing to load.
+            return;
         }
         if ('string' === typeof items) {
             items = J.parse(items);
         }
         if (!J.isArray(items)) {
-            throw new TypeError(this._getConstrName() +
-                                '.load: expects to load an array.');
+            this.throwErr('Error', 'load', 'expects to load an array');
         }
         for (i = 0; i < items.length; i++) {
-            // retrocycle if possible
+            // Retrocycle, if necessary and possible.
             items[i] = NDDB.retrocycle(items[i]);
         }
         this.importDB(items);
-        return true;
     };
 
     /**
@@ -8003,7 +8273,6 @@ if (!JSON) {
         });
     };
 
-
     /**
      * ### QueryBuilder.addBreak
      *
@@ -8018,14 +8287,12 @@ if (!JSON) {
      * ### QueryBuilder.reset
      *
      * Resets the current query selection
-     *
      */
     QueryBuilder.prototype.reset = function() {
         this.query = [];
         this.pointer = 0;
         this.query[this.pointer] = [];
     };
-
 
 
     function findCallback(obj) {
@@ -8162,6 +8429,44 @@ if (!JSON) {
             }
 
         }
+    };
+
+    /**
+     * # NDDBHashtray
+     *
+     * MIT Licensed
+     *
+     * Helper class for NDDB hash management
+     *
+     * ---
+     */
+
+    /**
+     * ## NDDBHashtray constructor
+     *
+     * Creates an hashtray object to manage maps item-hashes
+     *
+     * @param {string} The name of the index
+     * @param {array} The reference to the original database
+     */
+    function NDDBHashtray() {
+        this.resolve = {};
+    }
+
+    NDDBHashtray.prototype.set = function(key, nddbid, hash) {
+        this.resolve[key + '_' + nddbid] = hash;
+    };
+
+    NDDBHashtray.prototype.get = function(key, nddbid) {
+        return this.resolve[key + '_' + nddbid];
+    };
+
+    NDDBHashtray.prototype.remove = function(key, nddbid) {
+        delete this.resolve[key + '_' + nddbid];
+    };
+
+    NDDBHashtray.prototype.clear = function() {
+        this.resolve = {};
     };
 
     /**
@@ -8334,9 +8639,13 @@ if (!JSON) {
 
     // ## Closure
 })(
-    'undefined' !== typeof module && 'undefined' !== typeof module.exports ? module.exports: window
-    , 'undefined' !== typeof JSUS ? JSUS : module.parent.exports.JSUS || require('JSUS').JSUS
-    , ('object' === typeof module && 'function' === typeof require) ? module.parent.exports.store || require('shelf.js/build/shelf-fs.js').store : this.store
+    ('undefined' !== typeof module && 'undefined' !== typeof module.exports) ?
+        module.exports: window ,
+    ('undefined' !== typeof module && 'undefined' !== typeof module.exports) ?
+        module.parent.exports.JSUS || require('JSUS').JSUS : JSUS,
+    ('object' === typeof module && 'function' === typeof require) ?
+        module.parent.exports.store ||
+        require('shelf.js/build/shelf-fs.js').store : this.store
 );
 
 /**
@@ -13288,12 +13597,14 @@ if (!JSON) {
     }
 
     MessagingQueue.prototype.addMessageWithInterval = function(msg, func, del) {
-        this.validateMessage(msg);
-        var intervalID = setInterval(func, del);
-        this.msgIntQueue.insert({
-            msgId: msg.id,
-            intId: intervalID
-        });
+        if (this.validateMessage(msg)) {
+            var intervalID = setInterval(func, del);
+            this.msgIntQueue.insert({
+                msgId: '' + msg.id,
+                msg: msg,
+                intId: intervalID
+            });
+        }
     }
 
     MessagingQueue.prototype.deleteMessageById = function (msgId) {
@@ -13301,17 +13612,23 @@ if (!JSON) {
     }
 
     MessagingQueue.prototype.deleteMessageWithInterval = function (msgId) {
-        var result = this.msgIntQueue.selexec('msgId', '=', msgId)
+        var result = this.msgIntQueue.select('msgId', '=', msgId)
             .fetch();
 
         if (result.length == 0) {
             console.log('MessagingQueue.deleteMessageWithInterval: ' +
-            'Tried to delete non-existant Message');
+                        'Tried to delete non-existant Message.');
             return false;
         }
 
+        if (result.length > 1) {
+            console.log('MessagingQueue.deleteMessageWithInterval: ' +
+                        result[0].msgId + ' has been sent ' + result.length + ' times.')
+        }
+
+        clearInterval(result[0].intId);
         for (var i = 0; i < result.length; ++i) {
-            clearInterval(result[i].intId);
+            //clearInterval(result[i].intId);
         }
 
         this.msgIntQueue['msgIdIdx'].remove(msgId);
@@ -13319,7 +13636,7 @@ if (!JSON) {
     }
 
     MessagingQueue.prototype.getAllMessagesForClient = function (clientId) {
-        return this.msgQueue.selexec('to', '=', clientId).fetch();
+        return this.msgQueue.select('to', '=', clientId).fetch();
     }
 
     MessagingQueue.prototype.validateMessage = function(msg) {
@@ -14065,6 +14382,8 @@ if (!JSON) {
         this.reliableRetryInterval =
             (options != null && options.reliableRetryInterval != null) ?
                 options.reliableRetryInterval : constants.reliableRetryInterval;
+
+        this.processedMessages = {};
     }
 
     /**
@@ -14110,7 +14429,17 @@ if (!JSON) {
                         that.send(ack);
                     }
 
-                    node.socket.onMessage(msg);
+                    // Set Membership Test taken from
+                    // http://stackoverflow.com/a/7958422/2528077
+                    if (!Object.prototype.hasOwnProperty.call(
+                            that.processedMessages, msg.id)) {
+                        node.socket.onMessage(msg);
+                        that.processedMessages[msg.id] = msg;
+                    }
+                    else {
+                        console.log('Skipping Message ' + msg.id + ', already '
+                            + 'processed.');
+                    }
                 }
             });
         });
@@ -14158,7 +14487,10 @@ if (!JSON) {
         var that = this;
         if (msg.reliable && msg.target !== constants.target.ACK) {
             this.messagingQueue.addMessageWithInterval(msg,
-                function() {console.log("CLIENT_INTERVAL"); that.socket.send(msg.stringify())},
+                function() {
+                    //console.log(that.MessagingQueue.msgIntQueue.select().fetch());
+                    that.socket.send(msg.stringify());
+                },
                 that.reliableRetryInterval);
         }
 
@@ -25922,7 +26254,7 @@ if (!JSON) {
         this.widgets = {};
 
         /**
-         * ### Widgets.widgets
+         * ### Widgets.instances
          *
          * Container of appended widget instances
          *
@@ -25977,6 +26309,7 @@ if (!JSON) {
      * @param {string} w_str The name of the widget to load
      * @param {options} options Optional. Configuration options
      *   to be passed to the widgets
+     *
      * @return {object} widget The requested widget
      *
      * @see Widgets.add
@@ -26044,15 +26377,13 @@ if (!JSON) {
      * In the latter case, dependencies are checked, and it returns FALSE if
      * conditions are not met.
      *
-     * It automatically creates a fieldset element around the widget if
-     * requested by the internal widget configuration, or if specified in the
-     * options parameter.
-     *
-     * @param {string} w_str The name of the widget to load
-     * @param {object} root. Optional. The HTML element under which the widget
-     *   will be appended. Default: `GameWindow.getFrameRoot()` or document.body
+     * @param {string|object} w The name of the widget to load or a loaded
+     *   widget object
+     * @param {object} root Optional. The HTML element under which the widget
+     *   will be appended. Default: `GameWindow.getFrameRoot()` or
+     *   `document.body`
      * @param {options} options Optional. Configuration options to be passed
-     *   to the widgets
+     *   to the widget
      *
      * @return {object|boolean} The requested widget, or FALSE is an error
      *   occurs
@@ -26084,12 +26415,6 @@ if (!JSON) {
             w = this.get(w, options);
         }
 
-        // If fieldset option is null, a div is added instead.
-        // If fieldset option is undefined, default options are used.
-        //if (options.fieldset !== null) {
-        //    root = appendFieldset(root, options.fieldset ||
-        //                          w.defaults.fieldset, w);
-        //}
         w.panelDiv = appendDiv(root, {
             attributes: {
                 className: ['ng_widget', 'panel', 'panel-default', w.className]
@@ -26169,7 +26494,7 @@ if (!JSON) {
      *
      * TODO: Check for version and other constraints.
      *
-     * @param {object} The widget to check
+     * @param {object} w The widget to check
      * @param {boolean} quiet Optional. If TRUE, no warning will be raised.
      *   Default: FALSE
      * @return {boolean} TRUE, if all dependencies are met
@@ -26201,14 +26526,6 @@ if (!JSON) {
 
 
     // ## Helper functions
-
-    //function appendFieldset(root, options, w) {
-    //    var idFieldset, legend;
-    //    if (!options) return root;
-    //    idFieldset = options.id || w.id + '_fieldset';
-    //    legend = options.legend || w.legend;
-    //    return W.addFieldset(root, idFieldset, legend, options.attributes);
-    //}
 
     function appendDiv(root, options) {
         // TODO: Check every parameter
@@ -28556,114 +28873,6 @@ if (!JSON) {
     };
 
     DynamicTable.prototype.listeners = function() {};
-
-})(node);
-
-/**
- * # EventButton
- * Copyright(c) 2014 Stefano Balietti
- * MIT Licensed
- *
- * Creates a clickable button that fires an event
- *
- * www.nodegame.org
- */
-(function(node) {
-
-    "use strict";
-
-    var JSUS = node.JSUS;
-
-    node.widgets.register('EventButton', EventButton);
-
-    // ## Defaults
-
-    EventButton.defaults = {};
-    EventButton.defaults.id = 'eventbutton';
-    EventButton.defaults.fieldset = false;
-
-    // ## Meta-data
-
-    EventButton.version = '0.2';
-
-    // ## Dependencies
-
-    EventButton.dependencies = {
-        JSUS: {}
-    };
-
-    function EventButton(options) {
-        this.options = options;
-        this.id = options.id;
-
-        this.root = null;
-        this.text = 'Send';
-        this.button = document.createElement('button');
-        this.callback = null;
-        this.init(this.options);
-    }
-
-    EventButton.prototype.init = function(options) {
-        options = options || this.options;
-        this.button.id = options.id || this.id;
-        var text = options.text || this.text;
-        while (this.button.hasChildNodes()) {
-            this.button.removeChild(this.button.firstChild);
-        }
-        this.button.appendChild(document.createTextNode(text));
-        this.event = options.event || this.event;
-        this.callback = options.callback || this.callback;
-        var that = this;
-        if (this.event) {
-            // Emit Event only if callback is successful
-            this.button.onclick = function() {
-                var ok = true;
-                if (this.callback){
-                    ok = options.callback.call(node.game);
-                }
-                if (ok) node.emit(that.event);
-            };
-        }
-
-        //// Emit DONE only if callback is successful
-        //this.button.onclick = function() {
-        //        var ok = true;
-        //        if (options.exec) ok = options.exec.call(node.game);
-        //        if (ok) node.emit(that.event);
-        //}
-    };
-
-    EventButton.prototype.append = function(root) {
-        this.root = root;
-        root.appendChild(this.button);
-        return root;
-    };
-
-    EventButton.prototype.listeners = function() {};
-
-    // # DoneButton
-
-    node.widgets.register('DoneButton', DoneButton);
-
-    DoneButton.prototype.__proto__ = EventButton.prototype;
-    DoneButton.prototype.constructor = DoneButton;
-
-    // ## Meta-data
-
-    DoneButton.id = 'donebutton';
-    DoneButton.version = '0.1';
-
-    // ## Dependencies
-
-    DoneButton.dependencies = {
-        EventButton: {}
-    };
-
-    function DoneButton (options) {
-        options.event = 'DONE';
-        options.text = options.text || 'Done!';
-        EventButton.call(this, options);
-    }
 
 })(node);
 
