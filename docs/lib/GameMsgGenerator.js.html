@@ -128,6 +128,8 @@ MIT Licensed</p>
 <span class="kd">function</span> <span class="nx">GameMsgGenerator</span><span class="p">(</span><span class="nx">gameServer</span><span class="p">)</span> <span class="p">{</span>
     <span class="k">this</span><span class="p">.</span><span class="nx">session</span> <span class="o">=</span> <span class="nx">gameServer</span><span class="p">.</span><span class="nx">session</span><span class="p">;</span>
     <span class="k">this</span><span class="p">.</span><span class="nx">sender</span> <span class="o">=</span> <span class="nx">gameServer</span><span class="p">.</span><span class="nx">name</span><span class="p">;</span>
+    <span class="k">this</span><span class="p">.</span><span class="nx">reliableMessaging</span> <span class="o">=</span> <span class="nx">gameServer</span><span class="p">.</span><span class="nx">servernode</span><span class="p">.</span><span class="nx">reliableMessaging</span><span class="p">;</span>
+
     <span class="k">this</span><span class="p">.</span><span class="nx">stage</span> <span class="o">=</span> <span class="kc">null</span><span class="p">;</span>
 <span class="p">}</span>
 
@@ -185,22 +187,18 @@ as input parameter.</p>
         </td>
         <td class="code highlight"><div class="highlight"><pre>
 <span class="nx">GameMsgGenerator</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">create</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">msg</span><span class="p">)</span> <span class="p">{</span>
-    <span class="kd">var</span> <span class="nx">priority</span><span class="p">;</span>
+    <span class="kd">var</span> <span class="nx">priority</span><span class="p">,</span> <span class="nx">reliable</span><span class="p">;</span>
 
-    <span class="k">if</span> <span class="p">(</span><span class="s1">&#39;undefined&#39;</span> <span class="o">!==</span> <span class="k">typeof</span> <span class="nx">msg</span><span class="p">.</span><span class="nx">priority</span><span class="p">)</span> <span class="p">{</span>
-        <span class="nx">priority</span> <span class="o">=</span> <span class="nx">msg</span><span class="p">.</span><span class="nx">priority</span><span class="p">;</span>
-    <span class="p">}</span>
-    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="nx">msg</span><span class="p">.</span><span class="nx">target</span> <span class="o">===</span> <span class="nx">constants</span><span class="p">.</span><span class="nx">target</span><span class="p">.</span><span class="nx">GAMECOMMAND</span> <span class="o">||</span>
-             <span class="nx">msg</span><span class="p">.</span><span class="nx">target</span> <span class="o">===</span> <span class="nx">constants</span><span class="p">.</span><span class="nx">target</span><span class="p">.</span><span class="nx">REDIRECT</span> <span class="o">||</span>
-             <span class="nx">msg</span><span class="p">.</span><span class="nx">target</span> <span class="o">===</span> <span class="nx">constants</span><span class="p">.</span><span class="nx">target</span><span class="p">.</span><span class="nx">PCONNECT</span> <span class="o">||</span>
-             <span class="nx">msg</span><span class="p">.</span><span class="nx">target</span> <span class="o">===</span> <span class="nx">constants</span><span class="p">.</span><span class="nx">target</span><span class="p">.</span><span class="nx">PDISCONNECT</span> <span class="o">||</span>
-             <span class="nx">msg</span><span class="p">.</span><span class="nx">target</span> <span class="o">===</span> <span class="nx">constants</span><span class="p">.</span><span class="nx">target</span><span class="p">.</span><span class="nx">PRECONNECT</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">priority</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;undefined&#39;</span> <span class="o">!==</span> <span class="k">typeof</span> <span class="nx">msg</span><span class="p">.</span><span class="nx">priority</span><span class="p">)</span>
+        <span class="o">?</span> <span class="nx">msg</span><span class="p">.</span><span class="nx">priority</span>
+        <span class="o">:</span> <span class="p">(</span><span class="nx">msg</span><span class="p">.</span><span class="nx">target</span> <span class="o">===</span> <span class="nx">constants</span><span class="p">.</span><span class="nx">target</span><span class="p">.</span><span class="nx">GAMECOMMAND</span> <span class="o">||</span>
+           <span class="nx">msg</span><span class="p">.</span><span class="nx">target</span> <span class="o">===</span> <span class="nx">constants</span><span class="p">.</span><span class="nx">target</span><span class="p">.</span><span class="nx">REDIRECT</span> <span class="o">||</span>
+           <span class="nx">msg</span><span class="p">.</span><span class="nx">target</span> <span class="o">===</span> <span class="nx">constants</span><span class="p">.</span><span class="nx">target</span><span class="p">.</span><span class="nx">PCONNECT</span> <span class="o">||</span>
+           <span class="nx">msg</span><span class="p">.</span><span class="nx">target</span> <span class="o">===</span> <span class="nx">constants</span><span class="p">.</span><span class="nx">target</span><span class="p">.</span><span class="nx">PDISCONNECT</span> <span class="o">||</span>
+           <span class="nx">msg</span><span class="p">.</span><span class="nx">target</span> <span class="o">===</span> <span class="nx">constants</span><span class="p">.</span><span class="nx">target</span><span class="p">.</span><span class="nx">PRECONNECT</span> <span class="o">||</span>
+           <span class="nx">msg</span><span class="p">.</span><span class="nx">target</span> <span class="o">===</span> <span class="nx">constants</span><span class="p">.</span><span class="nx">target</span><span class="p">.</span><span class="nx">SETUP</span><span class="p">);</span>
 
-                <span class="nx">priority</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
-    <span class="p">}</span>
-    <span class="k">else</span> <span class="p">{</span>
-        <span class="nx">priority</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-    <span class="p">}</span>
+    <span class="nx">reliable</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;undefined&#39;</span> <span class="o">!==</span> <span class="k">typeof</span> <span class="nx">msg</span><span class="p">.</span><span class="nx">reliable</span><span class="p">)</span> <span class="o">?</span> <span class="nx">msg</span><span class="p">.</span><span class="nx">reliable</span> <span class="o">:</span> <span class="nx">priority</span><span class="p">;</span>
 
     <span class="k">return</span> <span class="k">new</span> <span class="nx">GameMsg</span><span class="p">({</span>
         <span class="nx">session</span><span class="o">:</span>
@@ -213,7 +211,7 @@ as input parameter.</p>
         <span class="nx">text</span><span class="o">:</span> <span class="s1">&#39;undefined&#39;</span> <span class="o">!==</span> <span class="k">typeof</span> <span class="nx">msg</span><span class="p">.</span><span class="nx">text</span> <span class="o">?</span> <span class="s2">&quot;&quot;</span> <span class="o">+</span> <span class="nx">msg</span><span class="p">.</span><span class="nx">text</span> <span class="o">:</span> <span class="kc">null</span><span class="p">,</span>
         <span class="nx">data</span><span class="o">:</span> <span class="s1">&#39;undefined&#39;</span> <span class="o">!==</span> <span class="k">typeof</span> <span class="nx">msg</span><span class="p">.</span><span class="nx">data</span> <span class="o">?</span> <span class="nx">msg</span><span class="p">.</span><span class="nx">data</span> <span class="o">:</span> <span class="kc">null</span><span class="p">,</span>
         <span class="nx">priority</span><span class="o">:</span> <span class="nx">priority</span><span class="p">,</span>
-        <span class="nx">reliable</span><span class="o">:</span> <span class="nx">msg</span><span class="p">.</span><span class="nx">reliable</span> <span class="o">||</span> <span class="mi">1</span>
+        <span class="nx">reliable</span><span class="o">:</span> <span class="nx">reliable</span> <span class="o">&amp;&amp;</span> <span class="k">this</span><span class="p">.</span><span class="nx">reliableMessaging</span>
     <span class="p">});</span>
 <span class="p">};</span>
 
@@ -264,6 +262,7 @@ of a game message with default settings</p>
       </tr>
   </tbody>
 </table>
+
   </div>
 </body>
 </html>

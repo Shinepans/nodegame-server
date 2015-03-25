@@ -39,6 +39,9 @@
       <div class="heading h3">
         <a href="#socketio.sidprefix">SocketIo.sidPrefix</a>
       </div>
+      <div class="heading h3">
+        <a href="#socketio.messagingqueue">SocketIo.messagingQueue</a>
+      </div>
       <div class="heading h2">
         <a href="#socketio%20methods">SocketIo methods</a>
       </div>
@@ -92,7 +95,7 @@ MIT Licensed</p>
 
 <span class="nx">module</span><span class="p">.</span><span class="nx">exports</span> <span class="o">=</span> <span class="nx">SocketIo</span><span class="p">;</span>
 
-<span class="kd">var</span> <span class="nx">GameMsg</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">&#39;nodegame-client&#39;</span><span class="p">).</span><span class="nx">GameMsg</span><span class="p">;</span>
+<span class="kd">var</span> <span class="nx">ngc</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">&#39;nodegame-client&#39;</span><span class="p">);</span>
 
 
 </pre></div>
@@ -257,6 +260,35 @@ TODO: rename.</p>
         </td>
         <td class="code highlight"><div class="highlight"><pre>
     <span class="k">this</span><span class="p">.</span><span class="nx">sidPrefix</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">gameServer</span><span class="p">.</span><span class="nx">ADMIN_SERVER</span> <span class="o">?</span> <span class="s1">&#39;SA&#39;</span> <span class="o">:</span> <span class="s1">&#39;SP&#39;</span><span class="p">;</span>
+
+
+</pre></div>
+        </td>
+      </tr>
+      <tr>
+        <td class="docs"><div class="dox">
+  <div class="summary">
+<div class="pilwrap" id="socketio.messagingqueue">
+  <h3>
+    <a href="#socketio.messagingqueue" name="socketio.messagingqueue" class="pilcrow">&#182;</a>
+    SocketIo.messagingQueue
+  </h3>
+</div>
+
+  </div>
+  <div class="body"><p>Messaging Queue to handle reliable transfer of messages.</p>
+  </div>
+  <div class="details">
+    <div class="dox_tag_title">Type</div>
+    <div class="dox_tag_detail">
+      <span class="dox_type">MessagingQueue
+</span>
+    </div>
+  </div>
+</div>
+        </td>
+        <td class="code highlight"><div class="highlight"><pre>
+    <span class="k">this</span><span class="p">.</span><span class="nx">messagingQueue</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">ngc</span><span class="p">.</span><span class="nx">MessagingQueue</span><span class="p">();</span>
 <span class="p">}</span>
 
 
@@ -302,6 +334,7 @@ TODO: rename.</p>
         <span class="kd">function</span><span class="p">(</span><span class="nx">socket</span><span class="p">)</span> <span class="p">{</span>
             <span class="kd">var</span> <span class="nx">res</span><span class="p">,</span> <span class="nx">prefixedSid</span><span class="p">;</span>
             <span class="kd">var</span> <span class="nx">startingRoom</span><span class="p">,</span> <span class="nx">clientType</span><span class="p">;</span>
+            <span class="kd">var</span> <span class="nx">gameMsg</span><span class="p">;</span>
 
             <span class="nx">prefixedSid</span> <span class="o">=</span> <span class="nx">that</span><span class="p">.</span><span class="nx">sidPrefix</span> <span class="o">+</span> <span class="nx">socket</span><span class="p">.</span><span class="nx">id</span><span class="p">;</span>
 
@@ -315,7 +348,36 @@ TODO: rename.</p>
 
             <span class="k">if</span> <span class="p">(</span><span class="nx">res</span><span class="p">)</span> <span class="p">{</span>
                 <span class="nx">socket</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="s1">&#39;message&#39;</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">msg</span><span class="p">)</span> <span class="p">{</span>
-                    <span class="nx">that</span><span class="p">.</span><span class="nx">gameServer</span><span class="p">.</span><span class="nx">onMessage</span><span class="p">(</span><span class="nx">msg</span><span class="p">);</span>
+                    <span class="k">try</span> <span class="p">{</span>
+                        <span class="kd">var</span> <span class="nx">obj</span> <span class="o">=</span> <span class="nx">JSON</span><span class="p">.</span><span class="nx">parse</span><span class="p">(</span><span class="nx">msg</span><span class="p">);</span>
+                        <span class="nx">gameMsg</span> <span class="o">=</span> <span class="nx">ngc</span><span class="p">.</span><span class="nx">GameMsg</span><span class="p">.</span><span class="nx">clone</span><span class="p">(</span><span class="nx">obj</span><span class="p">);</span>
+                        <span class="nx">that</span><span class="p">.</span><span class="nx">gameServer</span><span class="p">.</span><span class="nx">msgLogger</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">gameMsg</span><span class="p">);</span>
+
+                    <span class="p">}</span>
+                    <span class="k">catch</span><span class="p">(</span><span class="nx">e</span><span class="p">)</span> <span class="p">{</span>
+                        <span class="nx">that</span><span class="p">.</span><span class="nx">gameServer</span><span class="p">.</span><span class="nx">sysLogger</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span>
+                            <span class="s1">&#39;SocketIo: malformed msg received: &#39;</span> <span class="o">+</span> <span class="nx">e</span><span class="p">,</span>
+                            <span class="s1">&#39;error&#39;</span><span class="p">);</span>
+                        <span class="k">return</span> <span class="kc">false</span><span class="p">;</span>
+                    <span class="p">}</span>
+
+                    <span class="k">if</span> <span class="p">(</span><span class="nx">gameMsg</span><span class="p">.</span><span class="nx">target</span> <span class="o">===</span> <span class="nx">ngc</span><span class="p">.</span><span class="nx">constants</span><span class="p">.</span><span class="nx">target</span><span class="p">.</span><span class="nx">ACK</span><span class="p">)</span> <span class="p">{</span>
+                        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">&quot;Received ACK for &quot;</span> <span class="o">+</span> <span class="nx">gameMsg</span><span class="p">.</span><span class="nx">text</span><span class="p">);</span>
+                        <span class="nx">that</span><span class="p">.</span><span class="nx">messagingQueue</span>
+                            <span class="p">.</span><span class="nx">deleteMessageWithInterval</span><span class="p">(</span><span class="nx">gameMsg</span><span class="p">.</span><span class="nx">text</span><span class="p">);</span>
+                        <span class="k">return</span> <span class="kc">true</span><span class="p">;</span>
+                    <span class="p">}</span>
+                    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="nx">gameMsg</span><span class="p">.</span><span class="nx">reliable</span><span class="p">)</span> <span class="p">{</span>
+                        <span class="kd">var</span> <span class="nx">ack</span> <span class="o">=</span> <span class="nx">that</span><span class="p">.</span><span class="nx">gameServer</span><span class="p">.</span><span class="nx">msg</span><span class="p">.</span><span class="nx">create</span><span class="p">({</span>
+                            <span class="nx">target</span><span class="o">:</span> <span class="nx">ngc</span><span class="p">.</span><span class="nx">constants</span><span class="p">.</span><span class="nx">target</span><span class="p">.</span><span class="nx">ACK</span><span class="p">,</span>
+                            <span class="nx">text</span><span class="o">:</span> <span class="nx">gameMsg</span><span class="p">.</span><span class="nx">id</span><span class="p">,</span>
+                        <span class="p">});</span>
+
+                        <span class="nx">that</span><span class="p">.</span><span class="nx">gameServer</span><span class="p">.</span><span class="nx">socket</span><span class="p">.</span><span class="nx">send2client</span><span class="p">(</span><span class="nx">ack</span><span class="p">,</span> <span class="nx">gameMsg</span><span class="p">.</span><span class="nx">from</span><span class="p">);</span>
+                        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">&#39;Sent ACK for &#39;</span> <span class="o">+</span> <span class="nx">gameMsg</span><span class="p">.</span><span class="nx">id</span><span class="p">);</span>
+                    <span class="p">}</span>
+
+                    <span class="nx">that</span><span class="p">.</span><span class="nx">gameServer</span><span class="p">.</span><span class="nx">onMessage</span><span class="p">(</span><span class="nx">gameMsg</span><span class="p">);</span>
                 <span class="p">});</span>
                 <span class="nx">socket</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="s1">&#39;disconnect&#39;</span><span class="p">,</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
                     <span class="nx">that</span><span class="p">.</span><span class="nx">gameServer</span><span class="p">.</span><span class="nx">onDisconnect</span><span class="p">(</span><span class="nx">prefixedSid</span><span class="p">,</span> <span class="nx">socket</span><span class="p">);</span>
@@ -363,7 +425,7 @@ TODO: rename.</p>
       <tr>
         <td class="docs">
 <div class="pilwrap">
-  <a class="pilcrow" href="#section-12" id="section-12">&#182;</a>
+  <a class="pilcrow" href="#section-13" id="section-13">&#182;</a>
 </div>
 <p>Remove socket name from sid (exactly 2 characters, see constructor):</p>
         </td>
@@ -429,8 +491,9 @@ it is not used to locate the client.</p>
         </td>
         <td class="code highlight"><div class="highlight"><pre>
 <span class="nx">SocketIo</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">send</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">gameMsg</span><span class="p">,</span> <span class="nx">sid</span><span class="p">,</span> <span class="nx">broadcast</span><span class="p">)</span> <span class="p">{</span>
-    <span class="kd">var</span> <span class="nx">msg</span><span class="p">,</span> <span class="nx">client</span><span class="p">,</span> <span class="nx">rel</span><span class="p">,</span> <span class="nx">strippedSid</span><span class="p">,</span> <span class="nx">clientSid</span><span class="p">;</span>
+    <span class="kd">var</span> <span class="nx">msg</span><span class="p">,</span> <span class="nx">client</span><span class="p">,</span> <span class="nx">rel</span><span class="p">,</span> <span class="nx">strippedSid</span><span class="p">,</span> <span class="nx">clientSid</span><span class="p">,</span> <span class="nx">that</span><span class="p">;</span>
     <span class="kd">var</span> <span class="nx">sysLogger</span><span class="p">,</span> <span class="nx">msgLogger</span><span class="p">;</span>
+    <span class="nx">that</span> <span class="o">=</span> <span class="k">this</span><span class="p">;</span>
 
     <span class="k">if</span> <span class="p">(</span><span class="nx">sid</span> <span class="o">===</span> <span class="s1">&#39;SERVER&#39;</span> <span class="o">||</span> <span class="nx">sid</span> <span class="o">===</span> <span class="kc">null</span><span class="p">)</span> <span class="p">{</span>
         <span class="nx">sysLogger</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">&#39;SocketIo.send: Trying to send msg to &#39;</span> <span class="o">+</span>
@@ -456,7 +519,7 @@ it is not used to locate the client.</p>
       <tr>
         <td class="docs">
 <div class="pilwrap">
-  <a class="pilcrow" href="#section-14" id="section-14">&#182;</a>
+  <a class="pilcrow" href="#section-15" id="section-15">&#182;</a>
 </div>
 <p>Cleanup msg, if necessary.</p>
         </td>
@@ -476,8 +539,13 @@ it is not used to locate the client.</p>
     <span class="k">if</span> <span class="p">(</span><span class="nx">gameMsg</span><span class="p">.</span><span class="nx">_channelName</span><span class="p">)</span> <span class="k">delete</span> <span class="nx">gameMsg</span><span class="p">.</span><span class="nx">_channelName</span><span class="p">;</span>
     <span class="k">if</span> <span class="p">(</span><span class="nx">gameMsg</span><span class="p">.</span><span class="nx">_roomName</span><span class="p">)</span> <span class="k">delete</span> <span class="nx">gameMsg</span><span class="p">.</span><span class="nx">_roomName</span><span class="p">;</span>
 
+    <span class="nx">gameMsg</span><span class="p">.</span><span class="nx">reliable</span> <span class="o">=</span> <span class="kc">true</span><span class="p">;</span>
     <span class="nx">rel</span> <span class="o">=</span> <span class="nx">gameMsg</span><span class="p">.</span><span class="nx">reliable</span><span class="p">;</span>
     <span class="nx">msg</span> <span class="o">=</span> <span class="nx">gameMsg</span><span class="p">.</span><span class="nx">stringify</span><span class="p">();</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="nx">msg</span><span class="p">.</span><span class="nx">indexOf</span><span class="p">(</span><span class="s1">&#39;PCONNECT&#39;</span><span class="p">)</span> <span class="o">!==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">msg</span><span class="p">);</span>
+    <span class="p">}</span>
 
 
 </pre></div>
@@ -486,13 +554,23 @@ it is not used to locate the client.</p>
       <tr>
         <td class="docs">
 <div class="pilwrap">
-  <a class="pilcrow" href="#section-15" id="section-15">&#182;</a>
+  <a class="pilcrow" href="#section-16" id="section-16">&#182;</a>
 </div>
 <p>Send to ALL.</p>
         </td>
         <td class="code highlight"><div class="highlight"><pre>
     <span class="k">if</span> <span class="p">(</span><span class="nx">sid</span> <span class="o">===</span> <span class="s1">&#39;ALL&#39;</span><span class="p">)</span> <span class="p">{</span>
         <span class="k">if</span> <span class="p">(</span><span class="nx">rel</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">if</span> <span class="p">(</span><span class="nx">gameMsg</span><span class="p">.</span><span class="nx">target</span> <span class="o">!==</span> <span class="nx">ngc</span><span class="p">.</span><span class="nx">constants</span><span class="p">.</span><span class="nx">target</span><span class="p">.</span><span class="nx">ACK</span><span class="p">)</span> <span class="p">{</span>
+                <span class="k">this</span><span class="p">.</span><span class="nx">messagingQueue</span><span class="p">.</span><span class="nx">addMessageWithInterval</span><span class="p">(</span>
+                    <span class="nx">gameMsg</span><span class="p">,</span>
+                    <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+                        <span class="nx">that</span><span class="p">.</span><span class="nx">channel</span><span class="p">.</span><span class="nx">json</span><span class="p">.</span><span class="nx">send</span><span class="p">(</span><span class="nx">msg</span><span class="p">);</span>
+                    <span class="p">},</span>
+                    <span class="nx">that</span><span class="p">.</span><span class="nx">gameServer</span><span class="p">.</span><span class="nx">servernode</span><span class="p">.</span><span class="nx">reliableRetryInterval</span>
+                <span class="p">);</span>
+            <span class="p">}</span>
+
             <span class="k">this</span><span class="p">.</span><span class="nx">channel</span><span class="p">.</span><span class="nx">json</span><span class="p">.</span><span class="nx">send</span><span class="p">(</span><span class="nx">msg</span><span class="p">);</span>
         <span class="p">}</span>
         <span class="k">else</span> <span class="p">{</span>
@@ -509,7 +587,7 @@ it is not used to locate the client.</p>
       <tr>
         <td class="docs">
 <div class="pilwrap">
-  <a class="pilcrow" href="#section-16" id="section-16">&#182;</a>
+  <a class="pilcrow" href="#section-17" id="section-17">&#182;</a>
 </div>
 <p>Either send to a specific client(1), or to ALL but a specific client(2).</p>
         </td>
@@ -522,7 +600,7 @@ it is not used to locate the client.</p>
       <tr>
         <td class="docs">
 <div class="pilwrap">
-  <a class="pilcrow" href="#section-17" id="section-17">&#182;</a>
+  <a class="pilcrow" href="#section-18" id="section-18">&#182;</a>
 </div>
 <p>Remove socket name from sid (exactly 2 characters, see constructor):</p>
         </td>
@@ -536,7 +614,7 @@ it is not used to locate the client.</p>
       <tr>
         <td class="docs">
 <div class="pilwrap">
-  <a class="pilcrow" href="#section-18" id="section-18">&#182;</a>
+  <a class="pilcrow" href="#section-19" id="section-19">&#182;</a>
 </div>
 <p>(1)</p>
         </td>
@@ -552,8 +630,19 @@ it is not used to locate the client.</p>
             <span class="p">}</span>
 
             <span class="k">if</span> <span class="p">(</span><span class="nx">rel</span><span class="p">)</span> <span class="p">{</span>
+                <span class="k">if</span> <span class="p">(</span><span class="nx">gameMsg</span><span class="p">.</span><span class="nx">target</span> <span class="o">!==</span> <span class="nx">ngc</span><span class="p">.</span><span class="nx">constants</span><span class="p">.</span><span class="nx">target</span><span class="p">.</span><span class="nx">ACK</span><span class="p">)</span> <span class="p">{</span>
+                    <span class="k">this</span><span class="p">.</span><span class="nx">messagingQueue</span><span class="p">.</span><span class="nx">addMessageWithInterval</span><span class="p">(</span>
+                        <span class="nx">gameMsg</span><span class="p">,</span>
+                        <span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
+                            <span class="nx">client</span><span class="p">.</span><span class="nx">json</span><span class="p">.</span><span class="nx">send</span><span class="p">(</span><span class="nx">msg</span><span class="p">);</span>
+                        <span class="p">},</span>
+                        <span class="nx">that</span><span class="p">.</span><span class="nx">gameServer</span><span class="p">.</span><span class="nx">servernode</span><span class="p">.</span><span class="nx">reliableRetryInterval</span>
+                    <span class="p">);</span>
+                <span class="p">}</span>
+
                 <span class="nx">client</span><span class="p">.</span><span class="nx">json</span><span class="p">.</span><span class="nx">send</span><span class="p">(</span><span class="nx">msg</span><span class="p">);</span>
             <span class="p">}</span>
+
             <span class="k">else</span> <span class="p">{</span>
                 <span class="nx">client</span><span class="p">.</span><span class="kr">volatile</span><span class="p">.</span><span class="nx">json</span><span class="p">.</span><span class="nx">send</span><span class="p">(</span><span class="nx">msg</span><span class="p">);</span>
             <span class="p">}</span>
@@ -569,23 +658,33 @@ it is not used to locate the client.</p>
       <tr>
         <td class="docs">
 <div class="pilwrap">
-  <a class="pilcrow" href="#section-19" id="section-19">&#182;</a>
+  <a class="pilcrow" href="#section-20" id="section-20">&#182;</a>
 </div>
 <p>(2)</p>
         </td>
         <td class="code highlight"><div class="highlight"><pre>
         <span class="k">else</span> <span class="p">{</span>
-
             <span class="k">for</span> <span class="p">(</span><span class="nx">clientSid</span> <span class="k">in</span> <span class="k">this</span><span class="p">.</span><span class="nx">channel</span><span class="p">.</span><span class="nx">sockets</span><span class="p">)</span> <span class="p">{</span>
                 <span class="k">if</span> <span class="p">(</span><span class="nx">strippedSid</span> <span class="o">===</span> <span class="nx">clientSid</span><span class="p">)</span> <span class="k">continue</span><span class="p">;</span>
 
                 <span class="nx">client</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">channel</span><span class="p">.</span><span class="nx">sockets</span><span class="p">[</span><span class="nx">clientSid</span><span class="p">];</span>
                 <span class="k">if</span> <span class="p">(</span><span class="nx">rel</span><span class="p">)</span> <span class="p">{</span>
+                    <span class="k">if</span> <span class="p">(</span><span class="nx">gameMsg</span><span class="p">.</span><span class="nx">target</span> <span class="o">!==</span> <span class="nx">ngc</span><span class="p">.</span><span class="nx">constants</span><span class="p">.</span><span class="nx">target</span><span class="p">.</span><span class="nx">ACK</span><span class="p">)</span> <span class="p">{</span>
+                        <span class="k">this</span><span class="p">.</span><span class="nx">messagingQueue</span><span class="p">.</span><span class="nx">addMessageWithInterval</span><span class="p">(</span>
+                            <span class="nx">gameMsg</span><span class="p">,</span>
+                            <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+                                <span class="nx">client</span><span class="p">.</span><span class="nx">json</span><span class="p">.</span><span class="nx">send</span><span class="p">(</span><span class="nx">msg</span><span class="p">);</span>
+                            <span class="p">},</span>
+                            <span class="nx">that</span><span class="p">.</span><span class="nx">gameServer</span><span class="p">.</span><span class="nx">servernode</span><span class="p">.</span><span class="nx">reliableRetryInterval</span>
+                        <span class="p">);</span>
+                    <span class="p">}</span>
+
                     <span class="nx">client</span><span class="p">.</span><span class="nx">json</span><span class="p">.</span><span class="nx">send</span><span class="p">(</span><span class="nx">msg</span><span class="p">);</span>
                 <span class="p">}</span>
                 <span class="k">else</span> <span class="p">{</span>
                     <span class="nx">client</span><span class="p">.</span><span class="kr">volatile</span><span class="p">.</span><span class="nx">json</span><span class="p">.</span><span class="nx">send</span><span class="p">(</span><span class="nx">msg</span><span class="p">);</span>
                 <span class="p">}</span>
+
                 <span class="nx">sysLogger</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">&#39;Msg &#39;</span> <span class="o">+</span> <span class="nx">gameMsg</span><span class="p">.</span><span class="nx">toSMS</span><span class="p">()</span> <span class="o">+</span> <span class="s1">&#39; sent to sid &#39;</span> <span class="o">+</span>
                               <span class="nx">clientSid</span><span class="p">);</span>
                 <span class="nx">msgLogger</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">gameMsg</span><span class="p">);</span>
@@ -599,6 +698,7 @@ it is not used to locate the client.</p>
       </tr>
   </tbody>
 </table>
+
   </div>
 </body>
 </html>

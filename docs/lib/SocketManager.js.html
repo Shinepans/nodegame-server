@@ -137,7 +137,7 @@ delivered only if the settings allow it.</p>
 <p>If a message is sent across channels (if the server configuration allows it)
 the message is then obfuscated by calling GameMsgGenerator.obfuscate from
 the PlayerServer object of the sending channel.
-Obfuscatating the message is necessary so that the message session field
+Obfuscating the message is necessary so that the message session field
 matches the session id of the clients connected to each channel.
 Player and Admin server in the same channel share the same session id.</p>
 
@@ -168,6 +168,7 @@ found in the <em>from</em> field.</p>
 <span class="kd">var</span> <span class="nx">PlayerList</span> <span class="o">=</span> <span class="nx">ngc</span><span class="p">.</span><span class="nx">PlayerList</span><span class="p">;</span>
 <span class="kd">var</span> <span class="nx">NDDB</span> <span class="o">=</span> <span class="nx">ngc</span><span class="p">.</span><span class="nx">NDDB</span><span class="p">;</span>
 <span class="kd">var</span> <span class="nx">J</span> <span class="o">=</span> <span class="nx">ngc</span><span class="p">.</span><span class="nx">JSUS</span><span class="p">;</span>
+<span class="kd">var</span> <span class="nx">constants</span> <span class="o">=</span> <span class="nx">ngc</span><span class="p">.</span><span class="nx">constants</span><span class="p">;</span>
 
 
 </pre></div>
@@ -449,7 +450,6 @@ found in the <em>from</em> field.</p>
     <span class="k">default</span><span class="o">:</span>
         <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">send2client</span><span class="p">(</span><span class="nx">gameMsg</span><span class="p">);</span>
     <span class="p">}</span>
-
 <span class="p">};</span>
 
 
@@ -518,6 +518,7 @@ found in the <em>from</em> field.</p>
         <span class="k">this</span><span class="p">.</span><span class="nx">sysLogger</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">&#39;SocketManager.send2all: error/s occurred.&#39;</span><span class="p">,</span>
                            <span class="s1">&#39;error&#39;</span><span class="p">);</span>
     <span class="p">}</span>
+
     <span class="k">return</span> <span class="nx">res</span><span class="p">;</span>
 <span class="p">};</span>
 
@@ -587,6 +588,7 @@ found in the <em>from</em> field.</p>
         <span class="k">this</span><span class="p">.</span><span class="nx">sysLogger</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">&#39;SocketManager.send2allPlayers: error/s occurred.&#39;</span><span class="p">,</span>
                            <span class="s1">&#39;error&#39;</span><span class="p">);</span>
     <span class="p">}</span>
+
     <span class="k">return</span> <span class="nx">res</span><span class="p">;</span>
 <span class="p">};</span>
 
@@ -1265,6 +1267,7 @@ other channels, if the server is allowed to do so.</p>
             <span class="s1">&#39;, sid: &#39;</span> <span class="o">+</span> <span class="nx">receiverSid</span> <span class="o">+</span> <span class="s1">&#39;)&#39;</span><span class="p">;</span>
         <span class="k">this</span><span class="p">.</span><span class="nx">sysLogger</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">errMsg</span><span class="p">,</span> <span class="s1">&#39;error&#39;</span><span class="p">);</span>
     <span class="p">}</span>
+
     <span class="nx">gameMsg</span><span class="p">.</span><span class="nx">to</span> <span class="o">=</span> <span class="nx">originalTo</span><span class="p">;</span>
     <span class="k">return</span> <span class="nx">res</span><span class="p">;</span>
 <span class="p">};</span>
@@ -2002,8 +2005,9 @@ belong to.</p>
 <span class="nx">SocketManager</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">broadcast2group</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span>
         <span class="nx">gameMsg</span><span class="p">,</span> <span class="nx">group</span><span class="p">,</span> <span class="nx">resolvedFrom</span><span class="p">)</span> <span class="p">{</span>
 
-    <span class="kd">var</span> <span class="nx">res</span><span class="p">,</span> <span class="nx">i</span><span class="p">,</span> <span class="nx">len</span><span class="p">,</span> <span class="nx">from</span><span class="p">;</span>
+    <span class="kd">var</span> <span class="nx">res</span><span class="p">,</span> <span class="nx">i</span><span class="p">,</span> <span class="nx">len</span><span class="p">,</span> <span class="nx">from</span><span class="p">,</span> <span class="nx">orig_id</span><span class="p">;</span>
     <span class="nx">res</span> <span class="o">=</span> <span class="kc">true</span><span class="p">;</span>
+    <span class="nx">orig_id</span> <span class="o">=</span> <span class="nx">gameMsg</span><span class="p">.</span><span class="nx">id</span><span class="p">;</span>
 
     <span class="nx">from</span> <span class="o">=</span> <span class="nx">resolvedFrom</span> <span class="o">||</span> <span class="nx">gameMsg</span><span class="p">.</span><span class="nx">from</span><span class="p">;</span>
 
@@ -2031,6 +2035,7 @@ belong to.</p>
         </td>
         <td class="code highlight"><div class="highlight"><pre>
         <span class="k">if</span> <span class="p">(</span><span class="nx">group</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="o">!==</span> <span class="nx">from</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">gameMsg</span><span class="p">.</span><span class="nx">id</span> <span class="o">=</span> <span class="nx">orig_id</span> <span class="o">+</span> <span class="s1">&#39;_&#39;</span> <span class="o">+</span> <span class="nx">i</span><span class="p">;</span>
             <span class="nx">res</span> <span class="o">=</span> <span class="nx">res</span> <span class="o">&amp;&amp;</span> <span class="k">this</span><span class="p">.</span><span class="nx">send2client</span><span class="p">(</span><span class="nx">gameMsg</span><span class="p">,</span> <span class="nx">group</span><span class="p">[</span><span class="nx">i</span><span class="p">]);</span>
         <span class="p">}</span>
     <span class="p">}</span>
@@ -2174,7 +2179,7 @@ to locate the room. Can return null if the lookup fails.</p>
         </td>
         <td class="code highlight"><div class="highlight"><pre>
     <span class="nx">socket</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">clients</span><span class="p">[</span><span class="nx">resolvedTo</span><span class="p">]</span> <span class="o">||</span>
-        <span class="k">this</span><span class="p">.</span><span class="nx">server</span><span class="p">.</span><span class="nx">partner</span><span class="p">.</span><span class="nx">socket</span><span class="p">.</span><span class="nx">clients</span><span class="p">[</span><span class="nx">resolvedTo</span><span class="p">];</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">server</span><span class="p">.</span><span class="nx">partner</span><span class="p">.</span><span class="nx">socketManager</span><span class="p">.</span><span class="nx">clients</span><span class="p">[</span><span class="nx">resolvedTo</span><span class="p">];</span>
 
     <span class="k">if</span> <span class="p">(</span><span class="nx">socket</span><span class="p">)</span> <span class="p">{</span>
         <span class="nx">channel</span> <span class="o">=</span> <span class="nx">ownChannel</span><span class="p">;</span>
@@ -2381,7 +2386,7 @@ recipient information in all channels.</p>
 <span class="kd">function</span> <span class="nx">send2AllClientsInGameServer</span><span class="p">(</span><span class="nx">gameMsg</span><span class="p">,</span> <span class="nx">server</span><span class="p">)</span> <span class="p">{</span>
     <span class="kd">var</span> <span class="nx">i</span><span class="p">,</span> <span class="nx">res</span><span class="p">,</span> <span class="nx">sockets</span><span class="p">,</span> <span class="nx">smoothExec</span><span class="p">;</span>
     <span class="nx">smoothExec</span> <span class="o">=</span> <span class="kc">true</span><span class="p">;</span>
-    <span class="nx">sockets</span> <span class="o">=</span> <span class="nx">server</span><span class="p">.</span><span class="nx">socket</span><span class="p">.</span><span class="nx">sockets</span><span class="p">;</span>
+    <span class="nx">sockets</span> <span class="o">=</span> <span class="nx">server</span><span class="p">.</span><span class="nx">socketManager</span><span class="p">.</span><span class="nx">sockets</span><span class="p">;</span>
     <span class="k">for</span> <span class="p">(</span><span class="nx">i</span> <span class="k">in</span> <span class="nx">sockets</span><span class="p">)</span> <span class="p">{</span>
         <span class="k">if</span> <span class="p">(</span><span class="nx">sockets</span><span class="p">.</span><span class="nx">hasOwnProperty</span><span class="p">(</span><span class="nx">i</span><span class="p">))</span> <span class="p">{</span>
             <span class="nx">res</span> <span class="o">=</span> <span class="nx">sockets</span><span class="p">[</span><span class="nx">i</span><span class="p">].</span><span class="nx">send</span><span class="p">(</span><span class="nx">gameMsg</span><span class="p">,</span> <span class="s1">&#39;ALL&#39;</span><span class="p">);</span>
@@ -2400,7 +2405,7 @@ recipient information in all channels.</p>
 <span class="kd">function</span> <span class="nx">broadcast2AllClientsInGameServer</span><span class="p">(</span><span class="nx">gameMsg</span><span class="p">,</span> <span class="nx">server</span><span class="p">,</span> <span class="nx">sid</span><span class="p">)</span> <span class="p">{</span>
     <span class="kd">var</span> <span class="nx">i</span><span class="p">,</span> <span class="nx">res</span><span class="p">,</span> <span class="nx">sockets</span><span class="p">,</span> <span class="nx">smoothExec</span><span class="p">;</span>
     <span class="nx">smoothExec</span> <span class="o">=</span> <span class="kc">true</span><span class="p">;</span>
-    <span class="nx">sockets</span> <span class="o">=</span> <span class="nx">server</span><span class="p">.</span><span class="nx">socket</span><span class="p">.</span><span class="nx">sockets</span><span class="p">;</span>
+    <span class="nx">sockets</span> <span class="o">=</span> <span class="nx">server</span><span class="p">.</span><span class="nx">socketManager</span><span class="p">.</span><span class="nx">sockets</span><span class="p">;</span>
     <span class="k">for</span> <span class="p">(</span><span class="nx">i</span> <span class="k">in</span> <span class="nx">sockets</span><span class="p">)</span> <span class="p">{</span>
         <span class="k">if</span> <span class="p">(</span><span class="nx">sockets</span><span class="p">.</span><span class="nx">hasOwnProperty</span><span class="p">(</span><span class="nx">i</span><span class="p">))</span> <span class="p">{</span>
             <span class="nx">res</span> <span class="o">=</span> <span class="nx">sockets</span><span class="p">[</span><span class="nx">i</span><span class="p">].</span><span class="nx">send</span><span class="p">(</span><span class="nx">gameMsg</span><span class="p">,</span> <span class="nx">sid</span><span class="p">,</span> <span class="kc">true</span><span class="p">);</span>
@@ -2420,6 +2425,7 @@ recipient information in all channels.</p>
       </tr>
   </tbody>
 </table>
+
   </div>
 </body>
 </html>
