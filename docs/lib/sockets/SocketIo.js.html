@@ -373,7 +373,8 @@ TODO: rename.</p>
                             <span class="nx">text</span><span class="o">:</span> <span class="nx">gameMsg</span><span class="p">.</span><span class="nx">id</span><span class="p">,</span>
                         <span class="p">});</span>
 
-                        <span class="nx">that</span><span class="p">.</span><span class="nx">gameServer</span><span class="p">.</span><span class="nx">socketManager</span><span class="p">.</span><span class="nx">send2client</span><span class="p">(</span><span class="nx">ack</span><span class="p">,</span> <span class="nx">gameMsg</span><span class="p">.</span><span class="nx">from</span><span class="p">);</span>
+                        <span class="nx">that</span><span class="p">.</span><span class="nx">gameServer</span><span class="p">.</span><span class="nx">socketManager</span><span class="p">.</span><span class="nx">send2client</span><span class="p">(</span>
+                            <span class="nx">ack</span><span class="p">,</span> <span class="nx">gameMsg</span><span class="p">.</span><span class="nx">from</span><span class="p">);</span>
                         <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">&#39;Sent ACK for &#39;</span> <span class="o">+</span> <span class="nx">gameMsg</span><span class="p">.</span><span class="nx">id</span><span class="p">);</span>
                     <span class="p">}</span>
 
@@ -569,12 +570,9 @@ it is not used to locate the client.</p>
                     <span class="nx">that</span><span class="p">.</span><span class="nx">gameServer</span><span class="p">.</span><span class="nx">servernode</span><span class="p">.</span><span class="nx">reliableRetryInterval</span>
                 <span class="p">);</span>
             <span class="p">}</span>
+        <span class="p">}</span>
 
-            <span class="k">this</span><span class="p">.</span><span class="nx">channel</span><span class="p">.</span><span class="nx">json</span><span class="p">.</span><span class="nx">send</span><span class="p">(</span><span class="nx">msg</span><span class="p">);</span>
-        <span class="p">}</span>
-        <span class="k">else</span> <span class="p">{</span>
-            <span class="k">this</span><span class="p">.</span><span class="nx">channel</span><span class="p">.</span><span class="nx">json</span><span class="p">.</span><span class="nx">send</span><span class="p">(</span><span class="nx">msg</span><span class="p">);</span>
-        <span class="p">}</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">channel</span><span class="p">.</span><span class="nx">json</span><span class="p">.</span><span class="nx">send</span><span class="p">(</span><span class="nx">msg</span><span class="p">);</span>
         <span class="nx">sysLogger</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">&#39;Msg &#39;</span> <span class="o">+</span> <span class="nx">gameMsg</span><span class="p">.</span><span class="nx">toSMS</span><span class="p">()</span> <span class="o">+</span> <span class="s1">&#39; sent to ALL&#39;</span><span class="p">);</span>
         <span class="nx">msgLogger</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">gameMsg</span><span class="p">);</span>
     <span class="p">}</span>
@@ -639,12 +637,9 @@ it is not used to locate the client.</p>
                     <span class="p">);</span>
                 <span class="p">}</span>
 
-                <span class="nx">client</span><span class="p">.</span><span class="nx">json</span><span class="p">.</span><span class="nx">send</span><span class="p">(</span><span class="nx">msg</span><span class="p">);</span>
             <span class="p">}</span>
 
-            <span class="k">else</span> <span class="p">{</span>
-                <span class="nx">client</span><span class="p">.</span><span class="nx">json</span><span class="p">.</span><span class="nx">send</span><span class="p">(</span><span class="nx">msg</span><span class="p">);</span>
-            <span class="p">}</span>
+            <span class="nx">client</span><span class="p">.</span><span class="nx">json</span><span class="p">.</span><span class="nx">send</span><span class="p">(</span><span class="nx">msg</span><span class="p">);</span>
             <span class="nx">sysLogger</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">&#39;Msg &#39;</span> <span class="o">+</span> <span class="nx">gameMsg</span><span class="p">.</span><span class="nx">toSMS</span><span class="p">()</span> <span class="o">+</span> <span class="s1">&#39; sent to sid &#39;</span> <span class="o">+</span>
                           <span class="nx">strippedSid</span><span class="p">);</span>
             <span class="nx">msgLogger</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">gameMsg</span><span class="p">);</span>
@@ -677,13 +672,9 @@ it is not used to locate the client.</p>
                             <span class="nx">that</span><span class="p">.</span><span class="nx">gameServer</span><span class="p">.</span><span class="nx">servernode</span><span class="p">.</span><span class="nx">reliableRetryInterval</span>
                         <span class="p">);</span>
                     <span class="p">}</span>
-
-                    <span class="nx">client</span><span class="p">.</span><span class="nx">json</span><span class="p">.</span><span class="nx">send</span><span class="p">(</span><span class="nx">msg</span><span class="p">);</span>
-                <span class="p">}</span>
-                <span class="k">else</span> <span class="p">{</span>
-                    <span class="nx">client</span><span class="p">.</span><span class="nx">json</span><span class="p">.</span><span class="nx">send</span><span class="p">(</span><span class="nx">msg</span><span class="p">);</span>
                 <span class="p">}</span>
 
+                <span class="nx">client</span><span class="p">.</span><span class="nx">json</span><span class="p">.</span><span class="nx">send</span><span class="p">(</span><span class="nx">msg</span><span class="p">);</span>
                 <span class="nx">sysLogger</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">&#39;Msg &#39;</span> <span class="o">+</span> <span class="nx">gameMsg</span><span class="p">.</span><span class="nx">toSMS</span><span class="p">()</span> <span class="o">+</span> <span class="s1">&#39; sent to sid &#39;</span> <span class="o">+</span>
                               <span class="nx">clientSid</span><span class="p">);</span>
                 <span class="nx">msgLogger</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">gameMsg</span><span class="p">);</span>
