@@ -25,11 +25,11 @@ function configure(servernode) {
     }
 
     // TODO: check
-    // servernode.log.msg = false;
-    // servernode.log.sys = false;
-    // servernode.log.folder = rootDir + '/log/';
+    //  servernode.log.msg = false;
+    //  servernode.log.sys = false;
+    //  servernode.log.folder = rootDir + '/log/';
     //
-    // servernode.mail = false; // experimental
+    //  servernode.mail = false; // experimental
 
     // The name of the server.
     servernode.name = "nodeGame server";
@@ -64,11 +64,11 @@ function configure(servernode) {
 
     // Enables the reliable sending of messages. Each GameMessage has a
     // reliable field which is ignored if this setting is not turned on.
-    servernode.reliableMessaging = true;
+    servernode.reliableMessaging = false;
 
     // Time interval in milliseconds between two consecutive tries of sending
     // reliable messages.
-    servernode.reliableRetryInterval = 3000;
+    servernode.reliableRetryInterval = 4000;
 
     // AdminServer default options.
     admin = {
@@ -128,7 +128,12 @@ function configure(servernode) {
 
         // Allow setting data (e.g. startingRoom, client type) in the query
         // data of a SocketIO connection.
-        sioQuery: true
+        sioQuery: true,
+
+        // Enable reconnections.
+        // If TRUE, clients will be matched with previous game history based on
+        // the clientId found in their cookies.
+        enableReconnections: true
     };
 
     // PlayerServer default options.
@@ -186,7 +191,10 @@ function configure(servernode) {
         getFromAdmins: false,
 
         // See above, in admin defaults.
-        sioQuery: true
+        sioQuery: true,
+
+        // See above, in the admin defaults.
+        enableReconnections: true
     };
 
     // Defaults option for a channel.

@@ -2210,8 +2210,8 @@ recipient information in all channels.</p>
                 <span class="nx">resolvedTo</span> <span class="o">=</span> <span class="nx">registry</span><span class="p">.</span><span class="nx">lookupClient</span><span class="p">(</span><span class="nx">to</span><span class="p">,</span>
                                                    <span class="nx">registry</span><span class="p">.</span><span class="nx">getClientRoom</span><span class="p">(</span><span class="nx">to</span><span class="p">));</span>
 
-                <span class="nx">socket</span> <span class="o">=</span> <span class="nx">channel</span><span class="p">.</span><span class="nx">player</span><span class="p">.</span><span class="nx">socket</span><span class="p">.</span><span class="nx">clients</span><span class="p">[</span><span class="nx">resolvedTo</span><span class="p">]</span> <span class="o">||</span>
-                    <span class="nx">channel</span><span class="p">.</span><span class="nx">admin</span><span class="p">.</span><span class="nx">socket</span><span class="p">.</span><span class="nx">clients</span><span class="p">[</span><span class="nx">resolvedTo</span><span class="p">];</span>
+                <span class="nx">socket</span> <span class="o">=</span> <span class="nx">channel</span><span class="p">.</span><span class="nx">player</span><span class="p">.</span><span class="nx">socketManager</span><span class="p">.</span><span class="nx">clients</span><span class="p">[</span><span class="nx">resolvedTo</span><span class="p">]</span> <span class="o">||</span>
+                    <span class="nx">channel</span><span class="p">.</span><span class="nx">admin</span><span class="p">.</span><span class="nx">socketManager</span><span class="p">.</span><span class="nx">clients</span><span class="p">[</span><span class="nx">resolvedTo</span><span class="p">];</span>
 
                 <span class="k">if</span> <span class="p">(</span><span class="nx">socket</span><span class="p">)</span> <span class="k">break</span><span class="p">;</span>
             <span class="p">}</span>
@@ -2425,7 +2425,6 @@ recipient information in all channels.</p>
       </tr>
   </tbody>
 </table>
-
   </div>
 </body>
 </html>
