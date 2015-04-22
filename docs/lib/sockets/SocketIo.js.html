@@ -379,7 +379,7 @@ This might change in different versions of Socket.IO</p>
                     <span class="k">if</span> <span class="p">(</span><span class="nx">gameMsg</span><span class="p">.</span><span class="nx">target</span> <span class="o">===</span> <span class="nx">ngc</span><span class="p">.</span><span class="nx">constants</span><span class="p">.</span><span class="nx">target</span><span class="p">.</span><span class="nx">ACK</span><span class="p">)</span> <span class="p">{</span>
                         <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">&quot;Received ACK for &quot;</span> <span class="o">+</span> <span class="nx">gameMsg</span><span class="p">.</span><span class="nx">text</span><span class="p">);</span>
                         <span class="nx">that</span><span class="p">.</span><span class="nx">messagingQueue</span>
-                            <span class="p">.</span><span class="nx">deleteMessageWithInterval</span><span class="p">(</span><span class="nx">gameMsg</span><span class="p">.</span><span class="nx">text</span><span class="p">);</span>
+                            <span class="p">.</span><span class="nx">deleteMessageWithIntervalById</span><span class="p">(</span><span class="nx">gameMsg</span><span class="p">.</span><span class="nx">text</span><span class="p">);</span>
                         <span class="k">return</span> <span class="kc">true</span><span class="p">;</span>
                     <span class="p">}</span>
                     <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="nx">gameMsg</span><span class="p">.</span><span class="nx">reliable</span><span class="p">)</span> <span class="p">{</span>
@@ -703,6 +703,7 @@ it is not used to locate the client.</p>
       </tr>
   </tbody>
 </table>
+
   </div>
 </body>
 </html>
