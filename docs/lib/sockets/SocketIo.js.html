@@ -455,7 +455,19 @@ This might change in different versions of Socket.IO</p>
     <span class="p">}</span>
 
     <span class="nx">socket</span><span class="p">.</span><span class="nx">disconnect</span><span class="p">();</span>
-    <span class="k">this</span><span class="p">.</span><span class="nx">gameServer</span><span class="p">.</span><span class="nx">onDisconnect</span><span class="p">(</span><span class="nx">sid</span><span class="p">,</span> <span class="nx">socket</span><span class="p">);</span>
+
+</pre></div>
+        </td>
+      </tr>
+      <tr>
+        <td class="docs">
+<div class="pilwrap">
+  <a class="pilcrow" href="#section-14" id="section-14">&#182;</a>
+</div>
+<p>This is already triggered by the method above.
+this.gameServer.onDisconnect(sid, socket);</p>
+        </td>
+        <td class="code highlight"><div class="highlight"><pre>
 <span class="p">};</span>
 
 
